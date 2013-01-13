@@ -620,7 +620,8 @@ buildLib verbosity pkg_descr lbi lib clbi = do
 
   (ghcProg, _) <- requireProgram verbosity ghcProgram (withPrograms lbi)
   let runGhcProg = runGHC verbosity ghcProg
-      skipCodegen = "-fno-code" `elem` programOverrideArgs ghcProg
+      allGhcOptions = hcOptions GHC (libBuildInfo lib) ++ programOverrideArgs ghcProg
+      skipCodegen = "-fno-code" `elem` allGhcOptions
 
   libBi <- hackThreadedFlag verbosity
              comp (withProfLib lbi) (libBuildInfo lib)
