@@ -620,6 +620,7 @@ buildLib verbosity pkg_descr lbi lib clbi = do
 
   (ghcProg, _) <- requireProgram verbosity ghcProgram (withPrograms lbi)
   let runGhcProg = runGHC verbosity ghcProg
+      skipCodegen = "-fno-code" `elem` programOverrideArgs ghcProg
 
   libBi <- hackThreadedFlag verbosity
              comp (withProfLib lbi) (libBuildInfo lib)
@@ -705,8 +706,11 @@ buildLib verbosity pkg_descr lbi lib clbi = do
     | ghcVersion < Version [7,2] [] -- ghc-7.2+ does not make _stub.o files
     , x <- libModules lib ]
 
-  hObjs     <- getHaskellObjects lib lbi
+  hObjs <-
+    if not skipCodegen
+            then getHaskellObjects lib lbi
                     pref objExtension True
+            else return []
   hProfObjs <-
     if (withProfLib lbi)
             then getHaskellObjects lib lbi
