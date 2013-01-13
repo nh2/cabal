@@ -620,6 +620,8 @@ buildLib verbosity pkg_descr lbi lib clbi = do
 
   (ghcProg, _) <- requireProgram verbosity ghcProgram (withPrograms lbi)
   let runGhcProg = runGHC verbosity ghcProg
+      allGhcOptions = hcOptions GHC (libBuildInfo lib) ++ programOverrideArgs ghcProg
+      noCode = "-fno-code" `elem` allGhcOptions
 
   libBi <- hackThreadedFlag verbosity
              comp (withProfLib lbi) (libBuildInfo lib)
@@ -779,7 +781,9 @@ buildLib verbosity pkg_descr lbi lib clbi = do
         ghciLibFilePath ghciObjFiles
 
     ifSharedLib $
-      runGhcProg ghcSharedLinkArgs
+      if noCode
+       then info verbosity "Skipping GHC shared library linking due to -fno-code."
+       else runGhcProg ghcSharedLinkArgs
 
 
 -- | Build an executable with GHC.
