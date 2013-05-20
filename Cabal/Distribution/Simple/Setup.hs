@@ -89,7 +89,7 @@ module Distribution.Simple.Setup (
   fromFlagOrDefault,
   flagToMaybe,
   flagToList,
-  boolOpt, boolOpt', trueArg, falseArg, optionVerbosity ) where
+  boolOpt, boolOpt', trueArg, falseArg, optionVerbosity, numJobsParser ) where
 
 import Distribution.Compiler ()
 import Distribution.ReadE
@@ -1329,6 +1329,7 @@ data BuildFlags = BuildFlags {
     buildProgramArgs :: [(String, [String])],
     buildDistPref    :: Flag FilePath,
     buildVerbosity   :: Flag Verbosity,
+    buildNumJobs     :: Flag (Maybe Int),
     -- TODO: this one should not be here, it's just that the silly
     -- UserHooks stop us from passing extra info in other ways
     buildArgs :: [String]
@@ -1345,6 +1346,7 @@ defaultBuildFlags  = BuildFlags {
     buildProgramArgs = [],
     buildDistPref    = Flag defaultDistPref,
     buildVerbosity   = Flag normal,
+    buildNumJobs     = Flag Nothing,
     buildArgs        = []
   }
 
@@ -1376,6 +1378,9 @@ buildOptions progConf showOrParseArgs =
   [ optionVerbosity
       buildVerbosity (\v flags -> flags { buildVerbosity = v })
 
+  , optionNumJobs
+      buildNumJobs (\v flags -> flags { buildNumJobs = v })
+
   , optionDistPref
       buildDistPref (\d flags -> flags { buildDistPref = d }) showOrParseArgs
   ] ++
@@ -1397,6 +1402,7 @@ instance Monoid BuildFlags where
     buildProgramPaths = mempty,
     buildProgramArgs = mempty,
     buildVerbosity   = mempty,
+    buildNumJobs     = mempty,
     buildDistPref    = mempty,
     buildArgs        = mempty
   }
@@ -1404,6 +1410,7 @@ instance Monoid BuildFlags where
     buildProgramPaths = combine buildProgramPaths,
     buildProgramArgs = combine buildProgramArgs,
     buildVerbosity   = combine buildVerbosity,
+    buildNumJobs     = combine buildNumJobs,
     buildDistPref    = combine buildDistPref,
     buildArgs        = combine buildArgs
   }
@@ -1532,7 +1539,8 @@ data TestFlags = TestFlags {
     --the testHook
     testList        :: Flag [String],
     -- TODO: think about if/how options are passed to test exes
-    testOptions     :: [PathTemplate]
+    testOptions     :: [PathTemplate],
+    testNumJobs     :: Flag (Maybe Int)
   }
 
 defaultTestFlags :: TestFlags
@@ -1544,7 +1552,8 @@ defaultTestFlags  = TestFlags {
     testShowDetails = toFlag Failures,
     testKeepTix     = toFlag False,
     testList        = Flag [],
-    testOptions     = []
+    testOptions     = [],
+    testNumJobs     = Flag Nothing
   }
 
 testCommand :: CommandUI TestFlags
@@ -1602,6 +1611,7 @@ testCommand = makeCommand name shortDesc longDesc defaultTestFlags options
             testOptions (\v flags -> flags { testOptions = v })
             (reqArg' "TEMPLATE" (\x -> [toPathTemplate x])
                 (map fromPathTemplate))
+      , optionNumJobs testNumJobs (\v flags -> flags { testNumJobs = v })
       ]
 
 emptyTestFlags :: TestFlags
@@ -1616,7 +1626,8 @@ instance Monoid TestFlags where
     testShowDetails = mempty,
     testKeepTix     = mempty,
     testList        = mempty,
-    testOptions     = mempty
+    testOptions     = mempty,
+    testNumJobs     = mempty
   }
   mappend a b = TestFlags {
     testDistPref    = combine testDistPref,
@@ -1626,7 +1637,8 @@ instance Monoid TestFlags where
     testShowDetails = combine testShowDetails,
     testKeepTix     = combine testKeepTix,
     testList        = combine testList,
-    testOptions     = combine testOptions
+    testOptions     = combine testOptions,
+    testNumJobs     = combine testNumJobs
   }
     where combine field = field a `mappend` field b
 
@@ -1637,14 +1649,16 @@ instance Monoid TestFlags where
 data BenchmarkFlags = BenchmarkFlags {
     benchmarkDistPref  :: Flag FilePath,
     benchmarkVerbosity :: Flag Verbosity,
-    benchmarkOptions   :: [PathTemplate]
+    benchmarkOptions   :: [PathTemplate],
+    benchmarkNumJobs   :: Flag (Maybe Int)
   }
 
 defaultBenchmarkFlags :: BenchmarkFlags
 defaultBenchmarkFlags  = BenchmarkFlags {
     benchmarkDistPref  = Flag defaultDistPref,
     benchmarkVerbosity = Flag normal,
-    benchmarkOptions   = []
+    benchmarkOptions   = [],
+    benchmarkNumJobs   = Flag Nothing
   }
 
 benchmarkCommand :: CommandUI BenchmarkFlags
@@ -1675,6 +1689,7 @@ benchmarkCommand = makeCommand name shortDesc
             benchmarkOptions (\v flags -> flags { benchmarkOptions = v })
             (reqArg' "TEMPLATE" (\x -> [toPathTemplate x])
                 (map fromPathTemplate))
+      , optionNumJobs benchmarkNumJobs (\v flags -> flags { benchmarkNumJobs = v })
       ]
 
 emptyBenchmarkFlags :: BenchmarkFlags
@@ -1684,12 +1699,14 @@ instance Monoid BenchmarkFlags where
   mempty = BenchmarkFlags {
     benchmarkDistPref  = mempty,
     benchmarkVerbosity = mempty,
-    benchmarkOptions   = mempty
+    benchmarkOptions   = mempty,
+    benchmarkNumJobs   = mempty
   }
   mappend a b = BenchmarkFlags {
     benchmarkDistPref  = combine benchmarkDistPref,
     benchmarkVerbosity = combine benchmarkVerbosity,
-    benchmarkOptions   = combine benchmarkOptions
+    benchmarkOptions   = combine benchmarkOptions,
+    benchmarkNumJobs   = combine benchmarkNumJobs
   }
     where combine field = field a `mappend` field b
 
@@ -1783,6 +1800,18 @@ programConfigurationOptions progConf showOrParseArgs get set =
         get set
         (reqArg' "OPTS" (\args -> [(prog, splitArgs args)]) (const []))
 
+-- | Common parser for the @-j@ flag of @build@ and @install@.
+numJobsParser :: ReadE (Maybe Int)
+numJobsParser = ReadE $ \s ->
+  case s of
+    "$ncpus" -> Right Nothing
+    _        -> case reads s of
+      [(n, "")]
+        | n < 1     -> Left "The number of jobs should be 1 or more."
+        | n > 64    -> Left "You probably don't want that many jobs."
+        | otherwise -> Right (Just n)
+      _             -> Left "The jobs value should be a number or '$ncpus'"
+
 -- ------------------------------------------------------------
 -- * GetOpt Utils
 -- ------------------------------------------------------------
@@ -1828,6 +1857,19 @@ optionVerbosity get set =
     (optArg "n" (fmap Flag flagToVerbosity)
                 (Flag verbose) -- default Value if no n is given
                 (fmap (Just . showForCabal) . flagToList))
+
+
+optionNumJobs :: (flags -> Flag (Maybe Int))
+              -> (Flag (Maybe Int) -> flags -> flags)
+              -> OptionField flags
+optionNumJobs get set =
+  option "j" ["jobs"]
+    "Run NUM jobs simultaneously (or '$ncpus' if no NUM is given)."
+    get set
+    (optArg "NUM" (fmap Flag numJobsParser)
+                  (Flag Nothing)
+                  (map (Just . maybe "$ncpus" show) . flagToList))
+
 
 -- ------------------------------------------------------------
 -- * Other Utils

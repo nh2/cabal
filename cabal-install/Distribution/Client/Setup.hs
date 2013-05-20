@@ -58,7 +58,7 @@ import Distribution.Simple.Setup
          ( ConfigFlags(..), BuildFlags(..), TestFlags(..), BenchmarkFlags(..)
          , SDistFlags(..), HaddockFlags(..)
          , Flag(..), toFlag, fromFlag, flagToMaybe, flagToList
-         , optionVerbosity, boolOpt, trueArg, falseArg )
+         , optionVerbosity, boolOpt, trueArg, falseArg, numJobsParser )
 import Distribution.Simple.InstallDirs
          ( PathTemplate, InstallDirs(sysconfdir)
          , toPathTemplate, fromPathTemplate )
@@ -340,20 +340,13 @@ data SkipAddSourceDepsCheck =
   deriving Eq
 
 data BuildExFlags = BuildExFlags {
-  buildNumJobs  :: Flag (Maybe Int),
   buildOnly     :: Flag SkipAddSourceDepsCheck
 }
 
 buildExOptions :: ShowOrParseArgs -> [OptionField BuildExFlags]
 buildExOptions _showOrParseArgs =
-  option "j" ["jobs"]
-  "Run NUM jobs simultaneously (or '$ncpus' if no NUM is given)"
-  buildNumJobs (\v flags -> flags { buildNumJobs = v })
-  (optArg "NUM" (fmap Flag numJobsParser)
-   (Flag Nothing)
-   (map (Just . maybe "$ncpus" show) . flagToList))
 
-  : option [] ["only"]
+  option [] ["only"]
   "Don't reinstall add-source dependencies (sandbox-only)"
   buildOnly (\v flags -> flags { buildOnly = v })
   (noArg (Flag SkipAddSourceDepsCheck))
@@ -377,11 +370,9 @@ buildCommand = parent {
 
 instance Monoid BuildExFlags where
   mempty = BuildExFlags {
-    buildNumJobs = mempty,
     buildOnly    = mempty
   }
   mappend a b = BuildExFlags {
-    buildNumJobs = combine buildNumJobs,
     buildOnly    = combine buildOnly
   }
     where combine field = field a `mappend` field b
@@ -1431,21 +1422,6 @@ instance Monoid SandboxFlags where
     }
     where combine field = field a `mappend` field b
 
--- ------------------------------------------------------------
--- * Shared options utils
--- ------------------------------------------------------------
-
--- | Common parser for the @-j@ flag of @build@ and @install@.
-numJobsParser :: ReadE (Maybe Int)
-numJobsParser = ReadE $ \s ->
-  case s of
-    "$ncpus" -> Right Nothing
-    _        -> case reads s of
-      [(n, "")]
-        | n < 1     -> Left "The number of jobs should be 1 or more."
-        | n > 64    -> Left "You probably don't want that many jobs."
-        | otherwise -> Right (Just n)
-      _             -> Left "The jobs value should be a number or '$ncpus'"
 
 -- ------------------------------------------------------------
 -- * GetOpt Utils

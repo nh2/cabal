@@ -273,7 +273,7 @@ buildAction (buildFlags, buildExFlags) extraArgs globalFlags = do
   -- Calls 'configureAction' to do the real work, so nothing special has to be
   -- done to support sandboxes.
   useSandbox <- reconfigure verbosity distPref
-                mempty [] globalFlags noAddSource (buildNumJobs buildExFlags)
+                mempty [] globalFlags noAddSource (buildNumJobs buildFlags)
                 (const Nothing)
 
   maybeWithSandboxDirOnSearchPath useSandbox $
@@ -632,7 +632,7 @@ testAction (testFlags, buildExFlags) extraArgs globalFlags = do
   -- reconfigure also checks if we're in a sandbox and reinstalls add-source
   -- deps if needed.
   useSandbox <- reconfigure verbosity distPref addConfigFlags []
-                globalFlags noAddSource (buildNumJobs buildExFlags) checkFlags
+                globalFlags noAddSource (testNumJobs testFlags) checkFlags
 
   maybeWithSandboxDirOnSearchPath useSandbox $
     build verbosity distPref mempty extraArgs
@@ -659,7 +659,7 @@ benchmarkAction (benchmarkFlags, buildExFlags) extraArgs globalFlags = do
   -- reconfigure also checks if we're in a sandbox and reinstalls add-source
   -- deps if needed.
   useSandbox <- reconfigure verbosity distPref addConfigFlags []
-                globalFlags noAddSource (buildNumJobs buildExFlags)
+                globalFlags noAddSource (benchmarkNumJobs benchmarkFlags)
                 checkFlags
 
   maybeWithSandboxDirOnSearchPath useSandbox $
@@ -810,7 +810,7 @@ runAction (buildFlags, buildExFlags) extraArgs globalFlags = do
   -- reconfigure also checks if we're in a sandbox and reinstalls add-source
   -- deps if needed.
   useSandbox <- reconfigure verbosity distPref mempty []
-                globalFlags noAddSource (buildNumJobs buildExFlags)
+                globalFlags noAddSource (buildNumJobs buildFlags)
                 (const Nothing)
 
   maybeWithSandboxDirOnSearchPath useSandbox $
