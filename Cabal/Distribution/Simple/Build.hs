@@ -99,6 +99,8 @@ import Distribution.Simple.Test ( stubFilePath, stubName )
 import Distribution.Simple.Utils
          ( createDirectoryIfMissingVerbose, rewriteFile
          , die, info, debug, warn, setupMessage )
+import Distribution.Simple.JobControl
+         ( newParallelJobControl, spawnJob, collectJob, newJobLimit, withJobLimit )
 
 import Distribution.Verbosity
          ( Verbosity )
@@ -106,11 +108,11 @@ import Distribution.Text
          ( display )
 
 import Data.Maybe
-         ( maybeToList )
+         ( fromMaybe, maybeToList )
 import Data.Either
          ( partitionEithers )
 import Data.List
-         ( intersect, intercalate )
+         ( intersect, intercalate, partition )
 import Control.Monad
          ( when, unless, forM_ )
 import System.FilePath
@@ -130,24 +132,54 @@ build pkg_descr lbi flags suffixes = do
 
   targets  <- readBuildTargets pkg_descr (buildArgs flags)
   targets' <- checkBuildTargets verbosity pkg_descr targets
-  let componentsToBuild = map fst (componentsInBuildOrder lbi (map fst targets'))
+  let componentsToBuild = componentsInBuildOrder lbi (map fst targets')
   info verbosity $ "Component build order: "
-                ++ intercalate ", " (map showComponentName componentsToBuild)
+                ++ intercalate ", " (map (showComponentName . fst) componentsToBuild)
 
   initialBuildSteps distPref pkg_descr lbi verbosity
   when (null targets) $
     -- Only bother with this message if we're building the whole package
     setupMessage verbosity "Building" (packageId pkg_descr)
 
+  -- Strategy for parallel building:
+  -- First build the library on its own, then build all executables /
+  -- tests / etc. in parallel since they cannot depend on each other.
+
+  let (libraries, nonLibraries) = partition (\(name, _) -> name == CLibName)
+                                            componentsToBuild
+
+  -- In case we ever allow multiple libraries, we probably need to change this
+  -- code (and we should build them in parallel).
+  -- Note that it is also perfectly ok to have 0 libraries (only executables).
+  when (length libraries > 1) $ error "build: Found more than 1 library"
+
   -- Create internal package db on which the build will operate
   internalPackageDB <- createInternalPackageDB distPref
 
-  -- Build all components passed in
-  withComponentsInBuildOrder pkg_descr lbi componentsToBuild (buildComponentInternal internalPackageDB)
+  -- Limit number of concurrent non-library builds to `numJobs`, or 1 if not given
+  buildJobLimit <- newJobLimit (fromMaybe 1 numJobs)
+
+  -- TODO make sure linker errors let cabal exit with code 1
+  -- TODO make sure Ctrl-C kills parallel builds
+
+  -- Build the library
+  withComponentsInBuildOrder pkg_descr lbi (map fst libraries)
+                             (buildComponentInternal internalPackageDB)
+
+  -- Build everything else in parallel
+  jobControl <- newParallelJobControl
+  forM_ nonLibraries $ \(cname, clbi) -> do
+    -- Run in parallel with job limit.
+    -- TODO Check what happens when a job throws an exception.
+    spawnJob jobControl $ withJobLimit buildJobLimit $
+      buildComponentInternal internalPackageDB (getComponent pkg_descr cname) clbi
+
+  forM_ nonLibraries (\_ -> collectJob jobControl)
 
   where
     distPref  = fromFlag (buildDistPref flags)
     verbosity = fromFlag (buildVerbosity flags)
+    numJobs   = fromFlag (buildNumJobs flags)
 
     -- Builds the component against the internal package db
     buildComponentInternal internalPackageDB comp clbi = do
