@@ -790,11 +790,6 @@ buildLib verbosity pkg_descr lbi lib clbi = do
             else return []
 
   unless (null hObjs && null cObjs && null stubObjs) $ do
-    -- first remove library files if they exists
-    sequence_
-      [ removeFile libFilePath `catchIO` \_ -> return ()
-      | libFilePath <- [vanillaLibFilePath, profileLibFilePath
-                       ,sharedLibFilePath,  ghciLibFilePath] ]
 
     let staticObjectFiles =
                hObjs
