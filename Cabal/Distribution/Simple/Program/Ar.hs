@@ -13,6 +13,9 @@ module Distribution.Simple.Program.Ar (
     multiStageProgramInvocation,
   ) where
 
+import Control.Applicative ((<$>), (<*>))
+import Control.Monad (when)
+import qualified Data.ByteString.Lazy as BSL
 import Distribution.Simple.Program.Types
          ( ConfiguredProgram(..) )
 import Distribution.Simple.Program.Run
@@ -22,12 +25,16 @@ import Distribution.System
          ( OS(..), buildOS )
 import Distribution.Verbosity
          ( Verbosity, deafening, verbose )
+import System.Directory
+         ( copyFile, doesFileExist )
+import System.FilePath
+         ( (<.>) )
 
 -- | Call @ar@ to create a library archive from a bunch of object files.
 --
 createArLibArchive :: Verbosity -> ConfiguredProgram
                    -> FilePath -> [FilePath] -> IO ()
-createArLibArchive verbosity ar target files =
+createArLibArchive verbosity ar target files = do
 
   -- The args to use with "ar" are actually rather subtle and system-dependent.
   -- In particular we have the following issues:
@@ -46,6 +53,10 @@ createArLibArchive verbosity ar target files =
   -- In all cases we use "ar D" for deterministic mode. This will prevent "ar"
   -- from including a timestamp, which would generate different outputs for
   -- same inputs and break re-linking avoidance.
+  --
+  -- If there is an old target file and the are produces the very same output,
+  -- we avoid touching the old target file to help tools like GHC and make
+  -- exiting early.
 
   let simpleArgs  = case buildOS of
              OSX -> ["-D", "-r", "-s"]
@@ -56,17 +67,31 @@ createArLibArchive verbosity ar target files =
              OSX -> ["-D", "-q", "-s"]
              _   -> ["-D", "-q"]
 
-      extraArgs   = verbosityOpts verbosity ++ [target]
+      tmpTarget   = target <.> "tmp"
+
+      extraArgs   = verbosityOpts verbosity ++ [tmpTarget]
 
       simple  = programInvocation ar (simpleArgs  ++ extraArgs)
       initial = programInvocation ar (initialArgs ++ extraArgs)
       middle  = initial
       final   = programInvocation ar (finalArgs   ++ extraArgs)
 
-   in sequence_
-        [ runProgramInvocation verbosity inv
-        | inv <- multiStageProgramInvocation
-                   simple (initial, middle, final) files ]
+  sequence_
+    [ runProgramInvocation verbosity inv
+    | inv <- multiStageProgramInvocation
+               simple (initial, middle, final) files ]
+
+  -- If this "ar" invocation has actually created something new,
+  -- copy the temporary file to the target.
+
+  writeTarget <- do
+    oldExists <- doesFileExist target
+    if not oldExists then return True
+                     -- Lazy IO comparison
+                     else (/=) <$> BSL.readFile target
+                               <*> BSL.readFile tmpTarget
+
+  when writeTarget $ copyFile tmpTarget target
 
   where
     verbosityOpts v | v >= deafening = ["-v"]
