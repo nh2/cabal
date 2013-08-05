@@ -42,15 +42,19 @@ createArLibArchive verbosity ar target files =
   -- Our solution is to use "ar r" in the simple case when one call is enough.
   -- When we need to call ar multiple times we use "ar q" and for the last
   -- call on OSX we use "ar qs" so that it'll make the index.
+  --
+  -- In all cases we use "ar D" for deterministic mode. This will prevent "ar"
+  -- from including a timestamp, which would generate different outputs for
+  -- same inputs and break re-linking avoidance.
 
   let simpleArgs  = case buildOS of
-             OSX -> ["-r", "-s"]
-             _   -> ["-r"]
+             OSX -> ["-D", "-r", "-s"]
+             _   -> ["-D", "-r"]
 
-      initialArgs = ["-q"]
+      initialArgs = ["-D", "-q"]
       finalArgs   = case buildOS of
-             OSX -> ["-q", "-s"]
-             _   -> ["-q"]
+             OSX -> ["-D", "-q", "-s"]
+             _   -> ["-D", "-q"]
 
       extraArgs   = verbosityOpts verbosity ++ [target]
 
