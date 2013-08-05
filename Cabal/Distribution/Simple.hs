@@ -83,6 +83,7 @@ module Distribution.Simple (
   ) where
 
 -- local
+import Distribution.Compat.OrdNub (ordNub)
 import Distribution.Simple.Compiler hiding (Flag)
 import Distribution.Simple.UserHooks
 import Distribution.Package --must not specify imports, since we're exporting moule.
@@ -140,7 +141,7 @@ import Control.Exception (throwIO)
 import Distribution.Compat.Exception (catchIO)
 
 import Control.Monad   (when)
-import Data.List       (intercalate, unionBy, nub, (\\))
+import Data.List       (intercalate, unionBy, (\\))
 
 -- | A simple implementation of @main@ for a Cabal setup script.
 -- It reads the package description file using IO, and performs the
@@ -427,8 +428,8 @@ sanityCheckHookedBuildInfo pkg_descr (_, hookExes)
          ++ head nonExistant ++ "' but the package does not have a "
          ++ "executable with that name."
   where
-    pkgExeNames  = nub (map exeName (executables pkg_descr))
-    hookExeNames = nub (map fst hookExes)
+    pkgExeNames  = ordNub (map exeName (executables pkg_descr))
+    hookExeNames = ordNub (map fst hookExes)
     nonExistant  = hookExeNames \\ pkgExeNames
 
 sanityCheckHookedBuildInfo _ _ = return ()

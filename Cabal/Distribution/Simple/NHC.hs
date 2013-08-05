@@ -50,6 +50,7 @@ module Distribution.Simple.NHC (
     installExe,
   ) where
 
+import Distribution.Compat.OrdNub (ordNub)
 import Distribution.Package
          ( PackageName, PackageIdentifier(..), InstalledPackageId(..)
          , packageName )
@@ -99,7 +100,6 @@ import System.Directory
          , removeFile, getHomeDirectory )
 
 import Data.Char ( toLower )
-import Data.List ( nub )
 import Data.Maybe    ( catMaybes )
 import Data.Monoid   ( Monoid(..) )
 import Control.Monad ( when, unless )
@@ -174,7 +174,7 @@ getInstalledPackages verbosity packagedbs conf = do
   (nhcProg, _) <- requireProgram verbosity nhcProgram conf
   let bindir = takeDirectory (programPath nhcProg)
       incdir = takeDirectory bindir </> "include" </> "nhc98"
-      dbdirs = nub (concatMap (packageDbPaths homedir incdir) packagedbs)
+      dbdirs = ordNub (concatMap (packageDbPaths homedir incdir) packagedbs)
   indexes  <- mapM getIndividualDBPackages dbdirs
   return $! mconcat indexes
 
@@ -300,7 +300,7 @@ buildLib verbosity pkg_descr lbi lib clbi = do
                    ++ extensionsToFlags (compiler lbi) (usedExtensions bi)
   inFiles <- getModulePaths lbi bi modules
   let targetDir = buildDir lbi
-      srcDirs  = nub (map takeDirectory inFiles)
+      srcDirs  = ordNub (map takeDirectory inFiles)
       destDirs = map (targetDir </>) srcDirs
   mapM_ (createDirectoryIfMissingVerbose verbosity True) destDirs
   rawSystemProgramConf verbosity hmakeProgram conf $
@@ -366,7 +366,7 @@ buildExe verbosity pkg_descr lbi exe clbi = do
   inFiles <- getModulePaths lbi bi modules
   let targetDir = buildDir lbi </> exeName exe
       exeDir    = targetDir </> (exeName exe ++ "-tmp")
-      srcDirs   = nub (map takeDirectory (modulePath exe : inFiles))
+      srcDirs   = ordNub (map takeDirectory (modulePath exe : inFiles))
       destDirs  = map (exeDir </>) srcDirs
   mapM_ (createDirectoryIfMissingVerbose verbosity True) destDirs
   rawSystemProgramConf verbosity hmakeProgram conf $

@@ -66,6 +66,7 @@ module Distribution.Simple.Register (
     generalInstalledPackageInfo,
   ) where
 
+import Distribution.Compat.OrdNub (ordNub)
 import Distribution.Simple.LocalBuildInfo
          ( LocalBuildInfo(..), ComponentLocalBuildInfo(..)
          , ComponentName(..), getComponentLocalBuildInfo
@@ -117,7 +118,7 @@ import System.Directory
 import Data.Maybe
          ( isJust, fromMaybe, maybeToList )
 import Data.List
-         ( partition, nub )
+         ( partition )
 import qualified Data.ByteString.Lazy.Char8 as BS.Char8
 
 -- -----------------------------------------------------------------------------
@@ -150,7 +151,7 @@ register pkg@PackageDescription { library       = Just lib  } lbi regFlags
     -- FIXME: there's really no guarantee this will work.
     -- registering into a totally different db stack can
     -- fail if dependencies cannot be satisfied.
-    packageDbs = nub $ withPackageDB lbi
+    packageDbs = ordNub $ withPackageDB lbi
                     ++ maybeToList (flagToMaybe  (regPackageDB regFlags))
     distPref  = fromFlag (regDistPref regFlags)
     verbosity = fromFlag (regVerbosity regFlags)

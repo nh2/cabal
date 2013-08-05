@@ -56,6 +56,7 @@ module Distribution.Simple.PreProcess (preprocessComponent, knownSuffixHandlers,
     where
 
 
+import Distribution.Compat.OrdNub (ordNub)
 import Control.Monad
 import Distribution.Simple.PreProcess.Unlit (unlit)
 import Distribution.Package
@@ -97,7 +98,6 @@ import Distribution.Version
 import Distribution.Verbosity
 
 import Data.Maybe (fromMaybe)
-import Data.List (nub)
 import System.Directory (getModificationTime, doesFileExist)
 import System.Info (os, arch)
 import System.FilePath (splitExtension, dropExtensions, (</>), (<.>),
@@ -437,7 +437,7 @@ ppHsc2hs bi lbi =
           -- OSX frameworks:
        ++ [ what ++ "=-F" ++ opt
           | isOSX
-          , opt <- nub (concatMap Installed.frameworkDirs pkgs)
+          , opt <- ordNub (concatMap Installed.frameworkDirs pkgs)
           , what <- ["--cflag", "--lflag"] ]
        ++ [ "--lflag=" ++ arg
           | isOSX

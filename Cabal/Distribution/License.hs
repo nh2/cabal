@@ -112,7 +112,7 @@ data License =
     -- | Not a recognised license.
     -- Allows us to deal with future extensions more gracefully.
   | UnknownLicense String
-  deriving (Read, Show, Eq, Typeable, Data)
+  deriving (Read, Show, Eq, Typeable, Ord, Data)
 
 knownLicenses :: [License]
 knownLicenses = [ GPL  unversioned, GPL  (version [2]),   GPL  (version [3])

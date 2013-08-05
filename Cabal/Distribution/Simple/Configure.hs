@@ -69,6 +69,7 @@ module Distribution.Simple.Configure (configure,
                                      )
     where
 
+import Distribution.Compat.OrdNub (ordNub)
 import Distribution.Compiler
     ( CompilerId(..) )
 import Distribution.Simple.Compiler
@@ -140,7 +141,7 @@ import qualified Distribution.Simple.UHC  as UHC
 import Control.Monad
     ( when, unless, foldM, filterM )
 import Data.List
-    ( nub, partition, isPrefixOf, inits )
+    ( partition, isPrefixOf, inits )
 import Data.Maybe
     ( isNothing, catMaybes, fromMaybe )
 import Data.Monoid
@@ -454,7 +455,7 @@ configure (pkg_descr0, pbi) cfg
                             defaultDirs (configInstallDirs cfg)
 
         -- check languages and extensions
-        let langlist = nub $ catMaybes $ map defaultLanguage
+        let langlist = ordNub $ catMaybes $ map defaultLanguage
                        (allBuildInfo pkg_descr)
         let langs = unsupportedLanguages comp langlist
         when (not (null langs)) $
@@ -462,7 +463,7 @@ configure (pkg_descr0, pbi) cfg
              ++ " requires the following languages which are not "
              ++ "supported by " ++ display (compilerId comp) ++ ": "
              ++ intercalate ", " (map display langs)
-        let extlist = nub $ concatMap allExtensions (allBuildInfo pkg_descr)
+        let extlist = ordNub $ concatMap allExtensions (allBuildInfo pkg_descr)
         let exts = unsupportedExtensions comp extlist
         when (not (null exts)) $
           die $ "The package " ++ display (packageId pkg_descr0)
@@ -813,7 +814,7 @@ configurePkgconfigPackages verbosity pkg_descr conf
     pkgconfigBuildInfo :: [Dependency] -> IO BuildInfo
     pkgconfigBuildInfo []      = return mempty
     pkgconfigBuildInfo pkgdeps = do
-      let pkgs = nub [ display pkg | Dependency pkg _ <- pkgdeps ]
+      let pkgs = ordNub [ display pkg | Dependency pkg _ <- pkgdeps ]
       ccflags <- pkgconfig ("--cflags" : pkgs)
       ldflags <- pkgconfig ("--libs"   : pkgs)
       return (ccLdOptionsBuildInfo (words ccflags) (words ldflags))

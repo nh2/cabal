@@ -72,13 +72,13 @@ module Distribution.Simple.Compiler (
         unsupportedExtensions
   ) where
 
+import Distribution.Compat.OrdNub (ordNub)
 import Distribution.Compiler
 import Distribution.Version (Version(..))
 import Distribution.Text (display)
 import Language.Haskell.Extension (Language(Haskell98), Extension)
 
 import Control.Monad (liftM)
-import Data.List (nub)
 import Data.Maybe (catMaybes, isNothing)
 import System.Directory (canonicalizePath)
 
@@ -203,7 +203,7 @@ type Flag = String
 
 -- |For the given compiler, return the flags for the supported extensions.
 extensionsToFlags :: Compiler -> [Extension] -> [Flag]
-extensionsToFlags comp = nub . filter (not . null)
+extensionsToFlags comp = ordNub . filter (not . null)
                        . catMaybes . map (extensionToFlag comp)
 
 extensionToFlag :: Compiler -> Extension -> Maybe Flag

@@ -44,6 +44,7 @@ module Distribution.Client.Targets (
 
   ) where
 
+import Distribution.Compat.OrdNub (ordNub)
 import Distribution.Package
          ( Package(..), PackageName(..)
          , PackageIdentifier(..), packageName, packageVersion
@@ -73,7 +74,7 @@ import Distribution.Simple.Utils
          ( die, warn, intercalate, findPackageDesc, fromUTF8, lowercase )
 
 import Data.List
-         ( find, nub )
+         ( find )
 import Data.Maybe
          ( listToMaybe )
 import Data.Either
@@ -635,7 +636,7 @@ disambiguatePackageName :: PackageNameEnv
                         -> PackageName
                         -> MaybeAmbigious PackageName
 disambiguatePackageName (PackageNameEnv pkgNameLookup) name =
-    case nub (pkgNameLookup name) of
+    case ordNub (pkgNameLookup name) of
       []      -> None
       [name'] -> Unambiguous name'
       names   -> case find (name==) names of

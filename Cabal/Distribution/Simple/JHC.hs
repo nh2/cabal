@@ -48,6 +48,7 @@ module Distribution.Simple.JHC (
         installLib, installExe
  ) where
 
+import Distribution.Compat.OrdNub (ordNub)
 import Distribution.PackageDescription as PD
        ( PackageDescription(..), BuildInfo(..), Executable(..)
        , Library(..), libModules, hcOptions, usedExtensions )
@@ -86,7 +87,6 @@ import Distribution.Compat.ReadP
     ( readP_to_S, string, skipSpaces )
 import Distribution.System ( Platform )
 
-import Data.List                ( nub )
 import Data.Char                ( isSpace )
 import Data.Maybe               ( fromMaybe )
 
@@ -189,7 +189,7 @@ constructJHCCmdLine lbi bi clbi _odir verbosity =
      ++ languageToFlags (compiler lbi) (defaultLanguage bi)
      ++ extensionsToFlags (compiler lbi) (usedExtensions bi)
      ++ ["--noauto","-i-"]
-     ++ concat [["-i", l] | l <- nub (hsSourceDirs bi)]
+     ++ concat [["-i", l] | l <- ordNub (hsSourceDirs bi)]
      ++ ["-i", autogenModulesDir lbi]
      ++ ["-optc" ++ opt | opt <- PD.ccOptions bi]
      -- It would be better if JHC would accept package names with versions,

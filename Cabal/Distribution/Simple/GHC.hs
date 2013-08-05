@@ -74,6 +74,7 @@ module Distribution.Simple.GHC (
         ghcDynamic,
  ) where
 
+import Distribution.Compat.OrdNub (ordNub)
 import qualified Distribution.Simple.GHC.IPI641 as IPI641
 import qualified Distribution.Simple.GHC.IPI642 as IPI642
 import Distribution.PackageDescription as PD
@@ -1064,7 +1065,7 @@ componentGhcOptions verbosity lbi bi clbi odir =
       ghcOptPackages        = componentPackageDeps clbi,
       ghcOptSplitObjs       = toFlag (splitObjs lbi),
       ghcOptSourcePathClear = toFlag True,
-      ghcOptSourcePath      = [odir] ++ nub (hsSourceDirs bi)
+      ghcOptSourcePath      = [odir] ++ ordNub (hsSourceDirs bi)
                                     ++ [autogenModulesDir lbi],
       ghcOptCppIncludePath  = [autogenModulesDir lbi, odir]
                                     ++ PD.includeDirs bi,

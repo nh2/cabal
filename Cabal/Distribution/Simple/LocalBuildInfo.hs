@@ -84,6 +84,7 @@ module Distribution.Simple.LocalBuildInfo (
   ) where
 
 
+import Distribution.Compat.OrdNub (ordNub)
 import Distribution.Simple.InstallDirs hiding (absoluteInstallDirs,
                                                prefixRelativeInstallDirs,
                                                substPathTemplate, )
@@ -105,7 +106,7 @@ import Distribution.Text
          ( display )
 import Distribution.System
           ( Platform )
-import Data.List (nub, find)
+import Data.List (find)
 import Data.Graph
 import Data.Tree  (flatten)
 import Data.Array ((!))
@@ -164,7 +165,7 @@ data LocalBuildInfo = LocalBuildInfo {
 externalPackageDeps :: LocalBuildInfo -> [(InstalledPackageId, PackageId)]
 externalPackageDeps lbi =
     -- TODO:  what about non-buildable components?
-    nub [ (ipkgid, pkgid)
+    ordNub [ (ipkgid, pkgid)
         | (_,clbi,_)      <- componentsConfigs lbi
         , (ipkgid, pkgid) <- componentPackageDeps clbi
         , not (internal pkgid) ]

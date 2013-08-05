@@ -207,6 +207,7 @@ library
   other-modules:
     Distribution.Compat.CopyFile
     Distribution.Compat.Exception
+    Distribution.Compat.OrdNub
     Distribution.Compat.TempFile
     Distribution.GetOpt
     Distribution.Simple.GHC.IPI641

@@ -69,6 +69,7 @@ module Distribution.Simple.LHC (
         ghcVerbosityOptions
  ) where
 
+import Distribution.Compat.OrdNub (ordNub)
 import Distribution.PackageDescription as PD
          ( PackageDescription(..), BuildInfo(..), Executable(..)
          , Library(..), libModules, hcOptions, usedExtensions, allExtensions )
@@ -114,7 +115,6 @@ import Language.Haskell.Extension
          ( Language(Haskell98), Extension(..), KnownExtension(..) )
 
 import Control.Monad            ( unless, when )
-import Data.List
 import Data.Maybe               ( catMaybes )
 import Data.Monoid              ( Monoid(..) )
 import System.Directory         ( removeFile, renameFile,
@@ -627,7 +627,7 @@ ghcOptions lbi bi clbi odir
      ++ (if splitObjs lbi then ["-split-objs"] else [])
      ++ ["-i"]
      ++ ["-i" ++ odir]
-     ++ ["-i" ++ l | l <- nub (hsSourceDirs bi)]
+     ++ ["-i" ++ l | l <- ordNub (hsSourceDirs bi)]
      ++ ["-i" ++ autogenModulesDir lbi]
      ++ ["-I" ++ autogenModulesDir lbi]
      ++ ["-I" ++ odir]

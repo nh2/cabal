@@ -9,6 +9,7 @@ import Data.Maybe
 import Data.Graph
 import Prelude hiding (pi)
 
+import Distribution.Compat.OrdNub (ordNub)
 import Distribution.PackageDescription (FlagAssignment) -- from Cabal
 import Distribution.Client.Types (OptionalStanza)
 
@@ -80,8 +81,8 @@ toCPs (A pa fa sa) rdm =
     g   :: Graph
     vm  :: Vertex -> ((), QPN, [QPN])
     cvm :: QPN -> Maybe Vertex
-    -- Note that the RevDepMap contains duplicate dependencies. Therefore the nub.
-    (g, vm, cvm) = graphFromEdges (L.map (\ (x, xs) -> ((), x, nub xs))
+    -- Note that the RevDepMap contains duplicate dependencies. Therefore the ordNub.
+    (g, vm, cvm) = graphFromEdges (L.map (\ (x, xs) -> ((), x, ordNub xs))
                                   (M.toList rdm))
     tg :: Graph
     tg = transposeG g

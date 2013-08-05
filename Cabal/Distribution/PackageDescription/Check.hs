@@ -62,9 +62,10 @@ module Distribution.PackageDescription.Check (
         checkPackageFileNames,
   ) where
 
+import Distribution.Compat.OrdNub (ordNub)
 import Data.Maybe
          ( isNothing, isJust, catMaybes, maybeToList, fromMaybe )
-import Data.List  (sort, group, isPrefixOf, nub, find)
+import Data.List  (sort, group, isPrefixOf, find)
 import Control.Monad
          ( filterM, liftM )
 import qualified System.Directory as System
@@ -483,7 +484,7 @@ checkFields pkg =
     unknownExtensions = [ name | bi <- allBuildInfo pkg
                                , UnknownExtension name <- allExtensions bi
                                , name `notElem` map display knownLanguages ]
-    deprecatedExtensions = nub $ catMaybes
+    deprecatedExtensions = ordNub $ catMaybes
       [ find ((==ext) . fst) Extension.deprecatedExtensions
       | bi <- allBuildInfo pkg
       , ext <- allExtensions bi ]
@@ -1128,12 +1129,12 @@ checkCabalVersion pkg =
     mentionedExtensions = [ ext | bi <- allBuildInfo pkg
                                 , ext <- allExtensions bi ]
     mentionedExtensionsThatNeedCabal12 =
-      nub (filter (`elem` compatExtensionsExtra) mentionedExtensions)
+      ordNub (filter (`elem` compatExtensionsExtra) mentionedExtensions)
 
     -- As of Cabal-1.4 we can add new extensions without worrying about
     -- breaking old versions of cabal.
     mentionedExtensionsThatNeedCabal14 =
-      nub (filter (`notElem` compatExtensions) mentionedExtensions)
+      ordNub (filter (`notElem` compatExtensions) mentionedExtensions)
 
     -- The known extensions in Cabal-1.2.3
     compatExtensions =

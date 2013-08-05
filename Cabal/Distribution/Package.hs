@@ -143,7 +143,7 @@ instance Text InstalledPackageId where
 -- | Describes a dependency on a source package (API)
 --
 data Dependency = Dependency PackageName VersionRange
-                  deriving (Read, Show, Eq, Typeable, Data)
+                  deriving (Read, Show, Eq, Typeable, Ord, Data)
 
 instance Text Dependency where
   disp (Dependency name ver) =

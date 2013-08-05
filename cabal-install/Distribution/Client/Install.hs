@@ -27,8 +27,9 @@ module Distribution.Client.Install (
     pruneInstallPlan
   ) where
 
+import Distribution.Compat.OrdNub (ordNub)
 import Data.List
-         ( unfoldr, nub, sort, (\\) )
+         ( unfoldr, sort, (\\) )
 import qualified Data.Set as S
 import Data.Maybe
          ( isJust, fromMaybe, maybeToList )
@@ -387,7 +388,7 @@ pruneInstallPlan pkgSpecifiers =
       ++ "required by a dependency of one of the other targets."
       where
         pkgids =
-          nub [ depid
+          ordNub [ depid
               | InstallPlan.PackageMissingDeps _ depids <- problems
               , depid <- depids
               , packageName depid `elem` targetnames ]
@@ -525,12 +526,12 @@ packageStatus installedPkgIndex cpkg =
       $ mergeBy (comparing packageName)
         -- get dependencies of installed package (convert to source pkg ids via
         -- index)
-        (nub . sort . concatMap
+        (ordNub . sort . concatMap
          (maybeToList . fmap Installed.sourcePackageId .
           PackageIndex.lookupInstalledPackageId installedPkgIndex) .
          Installed.depends $ pkg)
         -- get dependencies of configured package
-        (nub . sort . depends $ pkg')
+        (ordNub . sort . depends $ pkg')
 
     changed (InBoth    pkgid pkgid') = pkgid /= pkgid'
     changed _                        = True

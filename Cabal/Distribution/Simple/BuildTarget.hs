@@ -9,7 +9,7 @@
 -- Handling for user-specified build targets
 -----------------------------------------------------------------------------
 module Distribution.Simple.BuildTarget (
-  
+
     -- * Build targets
     BuildTarget(..),
     readBuildTargets,
@@ -25,6 +25,8 @@ module Distribution.Simple.BuildTarget (
     BuildTargetProblem(..),
     reportBuildTargetProblems,
   ) where
+
+import Distribution.Compat.OrdNub (ordNub)
 
 import Distribution.Package
          ( Package(..), PackageId, packageName )
@@ -47,7 +49,7 @@ import Distribution.Simple.Utils
          ( die, lowercase, equating )
 
 import Data.List
-         ( nub, stripPrefix, sortBy, groupBy, partition, intercalate )
+         ( stripPrefix, sortBy, groupBy, partition, intercalate )
 import Data.Ord
 import Data.Maybe
          ( listToMaybe, catMaybes )
@@ -74,7 +76,7 @@ import System.Directory
 -- | Various ways that a user may specify a build target.
 --
 data UserBuildTarget =
-     
+
      -- | A target specified by a single name. This could be a component
      -- module or file.
      --
@@ -123,7 +125,7 @@ data BuildTarget =
      -- | A specific file within a specific component.
      --
    | BuildTargetFile ComponentName FilePath
-  deriving (Show,Eq)
+  deriving (Show,Ord,Eq)
 
 
 -- ------------------------------------------------------------
@@ -146,7 +148,7 @@ checkTargetExistsAsFile :: UserBuildTarget -> IO (UserBuildTarget, Bool)
 checkTargetExistsAsFile t = do
     fexists <- existsAsFile (fileComponentOfTarget t)
     return (t, fexists)
-  
+
   where
     existsAsFile f = do
       exists <- doesFileExist f
@@ -239,7 +241,7 @@ stargets =
   , BuildTargetModule    (CExeName "tst") (mkMn "Foo")
   ]
     where
-    mkMn :: String -> ModuleName 
+    mkMn :: String -> ModuleName
     mkMn  = fromJust . simpleParse
 
 ex_pkgid :: PackageIdentifier
@@ -319,7 +321,7 @@ renderBuildTarget ql target pkgid =
     single (BuildTargetComponent cn  ) = dispCName cn
     single (BuildTargetModule    _  m) = display m
     single (BuildTargetFile      _  f) = f
-    
+
     double (BuildTargetComponent cn  ) = (dispKind cn, dispCName cn)
     double (BuildTargetModule    cn m) = (dispCName cn, display m)
     double (BuildTargetFile      cn f) = (dispCName cn, f)
@@ -467,7 +469,7 @@ ex_cs =
   ]
     where
     mkC n ds ms = ComponentInfo n (componentStringName pkgid n) ds (map mkMn ms)
-    mkMn :: String -> ModuleName 
+    mkMn :: String -> ModuleName
     mkMn  = fromJust . simpleParse
     pkgid :: PackageIdentifier
     Just pkgid = simpleParse "thelib"
@@ -535,7 +537,7 @@ guardComponentName s
   | otherwise        = matchErrorExpected "component name" s
   where
     validComponentChar c = isAlphaNum c || c == '.'
-                        || c == '_' || c == '-' || c == '\'' 
+                        || c == '_' || c == '-' || c == '\''
 
 matchComponentName :: [ComponentInfo] -> String -> Match ComponentInfo
 matchComponentName cs str =
@@ -590,7 +592,7 @@ matchModule3 cs str1 str2 str3 = do
 
 guardModuleName :: String -> Match ()
 guardModuleName s
-  | all validModuleChar s 
+  | all validModuleChar s
     && not (null s)       = increaseConfidence
   | otherwise             = matchErrorExpected "module name" s
   where
@@ -641,7 +643,7 @@ matchComponentFile c str fexists =
       matchPlus
         (matchFileExists str fexists)
         (matchPlusShadowing
-          (msum [ matchModuleFileRooted   dirs ms      str 
+          (msum [ matchModuleFileRooted   dirs ms      str
                 , matchOtherFileRooted    dirs hsFiles str ])
           (msum [ matchModuleFileUnrooted      ms      str
                 , matchOtherFileUnrooted       hsFiles str
@@ -729,7 +731,7 @@ type Confidence = Int
 
 data MatchError = MatchErrorExpected String String
                 | MatchErrorNoSuch   String String
-  deriving (Show, Eq)
+  deriving (Show, Eq, Ord)
 
 
 instance MonadPlus Match where
@@ -763,7 +765,7 @@ matchPlus a@(NoMatch      d1 ms) b@(NoMatch      d2 ms')
 --
 matchPlusShadowing :: Match a -> Match a -> Match a
 matchPlusShadowing a@(ExactMatch _ _) (ExactMatch _ _) = a
-matchPlusShadowing a                   b               = matchPlus a b 
+matchPlusShadowing a                   b               = matchPlus a b
 
 instance Functor Match where
   fmap _ (NoMatch      d ms) = NoMatch      d ms
@@ -813,13 +815,13 @@ increaseConfidence = ExactMatch 1 [()]
 increaseConfidenceFor :: Match a -> Match a
 increaseConfidenceFor m = m >>= \r -> increaseConfidence >> return r
 
-nubMatches :: Eq a => Match a -> Match a
+nubMatches :: (Eq a, Ord a) => Match a -> Match a
 nubMatches (NoMatch      d msgs) = NoMatch      d msgs
-nubMatches (ExactMatch   d xs)   = ExactMatch   d (nub xs)
-nubMatches (InexactMatch d xs)   = InexactMatch d (nub xs)
+nubMatches (ExactMatch   d xs)   = ExactMatch   d (ordNub xs)
+nubMatches (InexactMatch d xs)   = InexactMatch d (ordNub xs)
 
-nubMatchErrors :: Match a -> Match a
-nubMatchErrors (NoMatch      d msgs) = NoMatch      d (nub msgs)
+nubMatchErrors :: (Ord a) => Match a -> Match a
+nubMatchErrors (NoMatch      d msgs) = NoMatch      d (ordNub msgs)
 nubMatchErrors (ExactMatch   d xs)   = ExactMatch   d xs
 nubMatchErrors (InexactMatch d xs)   = InexactMatch d xs
 
@@ -845,14 +847,14 @@ tryEach = exactMatches
 -- possible matches. There may be 'None', a single 'Unambiguous' match or
 -- you may have an 'Ambiguous' match with several possibilities.
 --
-findMatch :: Eq b => Match b -> MaybeAmbigious b
+findMatch :: (Eq b, Ord b) => Match b -> MaybeAmbigious b
 findMatch match =
     case match of
-      NoMatch    _ msgs -> None (nub msgs)
+      NoMatch    _ msgs -> None (ordNub msgs)
       ExactMatch   _ xs -> checkAmbigious xs
       InexactMatch _ xs -> checkAmbigious xs
   where
-    checkAmbigious xs = case nub xs of
+    checkAmbigious xs = case ordNub xs of
                           [x] -> Unambiguous x
                           xs' -> Ambiguous   xs'
 

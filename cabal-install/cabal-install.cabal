@@ -108,6 +108,7 @@ executable cabal
         Distribution.Compat.Exception
         Distribution.Compat.Env
         Distribution.Compat.FilePerms
+        Distribution.Compat.OrdNub
         Distribution.Compat.Semaphore
         Distribution.Compat.Time
         Paths_cabal_install

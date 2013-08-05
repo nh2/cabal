@@ -51,8 +51,8 @@ module Distribution.Simple.UHC (
     buildLib, buildExe, installLib, registerPackage
   ) where
 
+import Distribution.Compat.OrdNub (ordNub)
 import Control.Monad
-import Data.List
 import Distribution.Compat.ReadP
 import Distribution.InstalledPackageInfo
 import Distribution.Package
@@ -121,7 +121,7 @@ getInstalledPackages verbosity comp packagedbs conf = do
   let compilerid = compilerId comp
   systemPkgDir <- rawSystemProgramStdoutConf verbosity uhcProgram conf ["--meta-pkgdir-system"]
   userPkgDir   <- getUserPackageDir
-  let pkgDirs    = nub (concatMap (packageDbPaths userPkgDir systemPkgDir) packagedbs)
+  let pkgDirs    = ordNub (concatMap (packageDbPaths userPkgDir systemPkgDir) packagedbs)
   -- putStrLn $ "pkgdirs: " ++ show pkgDirs
   -- call to "lines" necessary, because pkgdir contains an extra newline at the end
   pkgs <- liftM (map addBuiltinVersions . concat) .
@@ -205,7 +205,7 @@ buildLib verbosity pkg_descr lbi lib clbi = do
                        (map display (libModules lib))
 
   runUhcProg uhcArgs
-  
+
   return ()
 
 buildExe :: Verbosity -> PackageDescription -> LocalBuildInfo
@@ -243,7 +243,7 @@ constructUHCCmdLine user system lbi bi clbi odir verbosity =
   ++ ["--package=" ++ display (pkgName pkgid) | (_, pkgid) <- componentPackageDeps clbi ]
      -- search paths
   ++ ["-i" ++ odir]
-  ++ ["-i" ++ l | l <- nub (hsSourceDirs bi)]
+  ++ ["-i" ++ l | l <- ordNub (hsSourceDirs bi)]
   ++ ["-i" ++ autogenModulesDir lbi]
      -- output path
   ++ ["--odir=" ++ odir]

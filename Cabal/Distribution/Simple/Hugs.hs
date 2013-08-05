@@ -50,6 +50,7 @@ module Distribution.Simple.Hugs (
     registerPackage,
   ) where
 
+import Distribution.Compat.OrdNub (ordNub)
 import Distribution.Package
          ( PackageName, PackageIdentifier(..), InstalledPackageId(..)
          , packageName )
@@ -111,7 +112,7 @@ import Data.Char                ( isSpace )
 import Data.Maybe               ( mapMaybe, catMaybes )
 import Data.Monoid              ( Monoid(..) )
 import Control.Monad            ( unless, when, filterM )
-import Data.List                ( nub, sort, isSuffixOf )
+import Data.List                ( sort, isSuffixOf )
 import System.Directory
          ( doesFileExist, doesDirectoryExist, getDirectoryContents
          , removeDirectoryRecursive, getHomeDirectory )
@@ -213,7 +214,7 @@ getInstalledPackages verbosity packagedbs conf = do
   (hugsProg, _) <- requireProgram verbosity hugsProgram conf
   let hugsbindir = takeDirectory (programPath hugsProg)
       hugslibdir = takeDirectory hugsbindir </> "lib" </> "hugs"
-      dbdirs = nub (concatMap (packageDbPaths homedir hugslibdir) packagedbs)
+      dbdirs = ordNub (concatMap (packageDbPaths homedir hugslibdir) packagedbs)
   indexes  <- mapM getIndividualDBPackages dbdirs
   return $! mconcat indexes
 
@@ -339,7 +340,7 @@ buildExe verbosity pkg_descr lbi
   exe@Executable {modulePath=mainPath, buildInfo=bi} _clbi = do
     let pref = scratchDir lbi
     createDirectoryIfMissingVerbose verbosity True pref
-    
+
     let destDir = pref </> "programs"
     let exeMods = otherModules bi
     srcMainFile <- findFile (hsSourceDirs bi) mainPath
@@ -349,7 +350,7 @@ buildExe verbosity pkg_descr lbi
     let destPathsFile = exeDir </> paths_modulename
     copyFileVerbose verbosity (autogenModulesDir lbi </> paths_modulename)
                               destPathsFile
-    compileBuildInfo verbosity exeDir 
+    compileBuildInfo verbosity exeDir
       (maybe [] (hsSourceDirs . libBuildInfo) (library pkg_descr)) exeMods bi lbi
     compileFiles verbosity bi lbi exeDir [destMainFile, destPathsFile]
 
@@ -369,7 +370,7 @@ compileBuildInfo verbosity destDir mLibSrcDirs mods bi lbi = do
     -- Pass 1: copy or cpp files from build directory to scratch directory
     let useCpp = EnableExtension CPP `elem` allExtensions bi
     let srcDir = buildDir lbi
-        srcDirs = nub $ srcDir : hsSourceDirs bi ++ mLibSrcDirs
+        srcDirs = ordNub $ srcDir : hsSourceDirs bi ++ mLibSrcDirs
     info verbosity $ "Source directories: " ++ show srcDirs
     flip mapM_ mods $ \ m -> do
         fs <- findFileWithExtension suffixes srcDirs (ModuleName.toFilePath m)
@@ -419,7 +420,7 @@ compileFFI verbosity bi lbi modDir file = do
     (_, opts, file_incs) <- getOptionsFromSource file
     let ghcOpts = [ op | (GHC, ops) <- opts, op <- ops ]
     let pkg_incs = ["\"" ++ inc ++ "\"" | inc <- includes bi]
-    let incs = nub (sort (file_incs ++ includeOpts ghcOpts ++ pkg_incs))
+    let incs = ordNub (sort (file_incs ++ includeOpts ghcOpts ++ pkg_incs))
     let pathFlag = "-P" ++ modDir ++ [searchPathSeparator]
     let hugsArgs = "-98" : pathFlag : map ("-i" ++) incs
     cfiles <- getCFiles file

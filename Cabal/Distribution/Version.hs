@@ -119,7 +119,7 @@ data VersionRange
   | UnionVersionRanges     VersionRange VersionRange
   | IntersectVersionRanges VersionRange VersionRange
   | VersionRangeParens     VersionRange -- just '(exp)' parentheses syntax
-  deriving (Show,Read,Eq,Typeable,Data)
+  deriving (Show,Read,Eq,Typeable,Ord,Data)
 
 -- TODO orphan
 deriving instance Data Version

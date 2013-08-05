@@ -54,6 +54,7 @@ module Distribution.Client.PackageIndex (
   ) where
 
 import Prelude hiding (lookup)
+import Distribution.Compat.OrdNub (ordNub)
 import Control.Exception (assert)
 import qualified Data.Map as Map
 import Data.Map (Map)
@@ -61,7 +62,7 @@ import qualified Data.Tree  as Tree
 import qualified Data.Graph as Graph
 import qualified Data.Array as Array
 import Data.Array ((!))
-import Data.List (groupBy, sortBy, nub, isInfixOf)
+import Data.List (groupBy, sortBy, isInfixOf)
 import Data.Monoid (Monoid(..))
 import Data.Maybe (isJust, isNothing, fromMaybe, catMaybes)
 
@@ -410,7 +411,7 @@ dependencyInconsistencies index =
   | (name, uses) <- Map.toList inverseIndex
   , let inconsistencies = duplicatesBy uses
         versions = map snd inconsistencies
-  , reallyIsInconsistent name (nub versions) ]
+  , reallyIsInconsistent name (ordNub versions) ]
 
   where inverseIndex = Map.fromListWith (++)
           [ (packageName dep, [(packageId pkg, packageVersion dep)])

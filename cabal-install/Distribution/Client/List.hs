@@ -13,6 +13,7 @@ module Distribution.Client.List (
   list, info
   ) where
 
+import Distribution.Compat.OrdNub (ordNub)
 import Distribution.Package
          ( PackageName(..), Package(..), packageName, packageVersion
          , Dependency(..), simplifyDependency )
@@ -56,7 +57,7 @@ import Distribution.Client.FetchUtils
          ( isFetched )
 
 import Data.List
-         ( sortBy, groupBy, sort, nub, intersperse, maximumBy, partition )
+         ( sortBy, groupBy, sort, intersperse, maximumBy, partition )
 import Data.Maybe
          ( listToMaybe, fromJust, fromMaybe, isJust )
 import qualified Data.Map as Map
@@ -111,7 +112,7 @@ list verbosity packageDBs repos comp conf listFlags pats = do
              | pkg <- matches
              , version <- if onlyInstalled
                             then              installedVersions pkg
-                            else nub . sort $ installedVersions pkg
+                            else ordNub . sort $ installedVersions pkg
                                            ++ sourceVersions    pkg ]
              -- Note: this only works because for 'list', one cannot currently
              -- specify any version constraints, so listing all installed

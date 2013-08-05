@@ -142,12 +142,13 @@ module Distribution.Simple.Utils (
         wrapLine,
   ) where
 
+import Distribution.Compat.OrdNub (ordNub)
 import Control.Monad
     ( when, unless, filterM )
 import Control.Concurrent.MVar
     ( newEmptyMVar, putMVar, takeMVar )
 import Data.List
-  ( nub, unfoldr, isPrefixOf, tails, intercalate )
+  ( unfoldr, isPrefixOf, tails, intercalate )
 import Data.Char as Char
     ( toLower, chr, ord )
 import Data.Bits
@@ -578,7 +579,7 @@ findFile :: [FilePath]    -- ^search locations
 findFile searchPath fileName =
   findFirstFile id
     [ path </> fileName
-    | path <- nub searchPath]
+    | path <- ordNub searchPath]
   >>= maybe (die $ fileName ++ " doesn't exist") return
 
 -- | Find a file by looking in a search path with one of a list of possible
@@ -592,8 +593,8 @@ findFileWithExtension :: [String]
 findFileWithExtension extensions searchPath baseName =
   findFirstFile id
     [ path </> baseName <.> ext
-    | path <- nub searchPath
-    , ext <- nub extensions ]
+    | path <- ordNub searchPath
+    , ext <- ordNub extensions ]
 
 -- | Like 'findFileWithExtension' but returns which element of the search path
 -- the file was found in, and the file path relative to that base directory.
@@ -605,8 +606,8 @@ findFileWithExtension' :: [String]
 findFileWithExtension' extensions searchPath baseName =
   findFirstFile (uncurry (</>))
     [ (path, baseName <.> ext)
-    | path <- nub searchPath
-    , ext <- nub extensions ]
+    | path <- ordNub searchPath
+    , ext <- ordNub extensions ]
 
 findFirstFile :: (a -> FilePath) -> [a] -> IO (Maybe a)
 findFirstFile file = findFirst
@@ -825,7 +826,7 @@ copyFilesWith :: (Verbosity -> FilePath -> FilePath -> IO ())
 copyFilesWith doCopy verbosity targetDir srcFiles = do
 
   -- Create parent directories for everything
-  let dirs = map (targetDir </>) . nub . map (takeDirectory . snd) $ srcFiles
+  let dirs = map (targetDir </>) . ordNub . map (takeDirectory . snd) $ srcFiles
   mapM_ (createDirectoryIfMissingVerbose verbosity True) dirs
 
   -- Copy all the files

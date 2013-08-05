@@ -21,6 +21,7 @@ module Distribution.Client.Init (
 
   ) where
 
+import Distribution.Compat.OrdNub (ordNub)
 import System.IO
   ( hSetBuffering, stdout, BufferMode(..) )
 import System.Directory
@@ -34,7 +35,7 @@ import Data.Time
 import Data.Char
   ( toUpper )
 import Data.List
-  ( intercalate, nub, groupBy, (\\) )
+  ( intercalate, groupBy, (\\) )
 import Data.Maybe
   ( fromMaybe, isJust, catMaybes )
 import Data.Function
@@ -328,7 +329,7 @@ getModulesBuildToolsAndDeps pkgIx flags = do
   deps <-      return (dependencies flags)
            ?>> Just <$> importsToDeps flags
                         (fromString "Prelude" :  -- to ensure we get base as a dep
-                           (   nub   -- only need to consider each imported package once
+                           (   ordNub   -- only need to consider each imported package once
                              . filter (`notElem` mods)  -- don't consider modules from
                                                         -- this package itself
                              . concatMap imports
@@ -338,7 +339,7 @@ getModulesBuildToolsAndDeps pkgIx flags = do
                         pkgIx
 
   exts <-     return (otherExts flags)
-          ?>> (return . Just . nub . concatMap extensions $ sourceFiles)
+          ?>> (return . Just . ordNub . concatMap extensions $ sourceFiles)
 
   return $ flags { exposedModules = Just mods
                  , buildTools     = tools
@@ -356,7 +357,7 @@ importsToDeps flags mods pkgIx = do
       modDeps = map (id &&& flip M.lookup modMap) mods
 
   message flags "\nGuessing dependencies..."
-  nub . catMaybes <$> mapM (chooseDep flags) modDeps
+  ordNub . catMaybes <$> mapM (chooseDep flags) modDeps
 
 -- Given a module and a list of installed packages providing it,
 -- choose a dependency (i.e. package + version range) to use for that

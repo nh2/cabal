@@ -14,6 +14,7 @@ module Distribution.Client.Dependency.TopDown (
     topDownResolver
   ) where
 
+import Distribution.Compat.OrdNub (ordNub)
 import Distribution.Client.Dependency.TopDown.Types
 import qualified Distribution.Client.Dependency.TopDown.Constraints as Constraints
 import Distribution.Client.Dependency.TopDown.Constraints
@@ -56,7 +57,7 @@ import Distribution.Text
          ( display )
 
 import Data.List
-         ( foldl', maximumBy, minimumBy, nub, sort, sortBy, groupBy )
+         ( foldl', maximumBy, minimumBy, sort, sortBy, groupBy )
 import Data.Maybe
          ( fromJust, fromMaybe, catMaybes )
 import Data.Monoid
@@ -473,12 +474,12 @@ topologicalSortNumbering installedPkgIndex sourcePkgIndex =
     topologicalSortNumbers = Array.array (Array.bounds graph)
                                          (zip (Graph.topSort graph) [0..])
     (graph, _, toVertex)   = Graph.graphFromEdges $
-         [ ((), packageName pkg, nub deps)
+         [ ((), packageName pkg, ordNub deps)
          | pkgs@(pkg:_) <- PackageIndex.allPackagesByName installedPkgIndex
          , let deps = [ packageName dep
                       | pkg' <- pkgs
                       , dep  <- depends pkg' ] ]
-      ++ [ ((), packageName pkg, nub deps)
+      ++ [ ((), packageName pkg, ordNub deps)
          | pkgs@(pkg:_) <- PackageIndex.allPackagesByName sourcePkgIndex
          , let deps = [ depName
                       | SourcePackage _ pkg' _ _ <- pkgs

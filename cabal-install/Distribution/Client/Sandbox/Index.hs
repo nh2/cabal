@@ -18,6 +18,7 @@ module Distribution.Client.Sandbox.Index (
     defaultIndexFileName
   ) where
 
+import Distribution.Compat.OrdNub (ordNub)
 import qualified Distribution.Client.Tar as Tar
 import Distribution.Client.IndexUtils ( BuildTreeRefType(..)
                                       , refTypeFromTypeCode
@@ -37,7 +38,7 @@ import Distribution.Verbosity    ( Verbosity )
 import qualified Data.ByteString.Lazy as BS
 import Control.Exception         ( evaluate )
 import Control.Monad             ( liftM, unless )
-import Data.List                 ( (\\), intersect, nub )
+import Data.List                 ( (\\), intersect )
 import Data.Maybe                ( catMaybes )
 import System.Directory          ( createDirectoryIfMissing,
                                    doesDirectoryExist, doesFileExist,
@@ -134,7 +135,7 @@ addBuildTreeRefs _         _   []  _ =
   error "Distribution.Client.Sandbox.Index.addBuildTreeRefs: unexpected"
 addBuildTreeRefs verbosity path l' refType = do
   checkIndexExists path
-  l <- liftM nub . mapM tryCanonicalizePath $ l'
+  l <- liftM ordNub . mapM tryCanonicalizePath $ l'
   treesInIndex <- fmap (map buildTreePath) (readBuildTreeRefsFromFile path)
   -- Add only those paths that aren't already in the index.
   treesToAdd <- mapM (buildTreeRefFromPath refType) (l \\ treesInIndex)

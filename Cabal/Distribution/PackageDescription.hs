@@ -124,8 +124,9 @@ module Distribution.PackageDescription (
         knownRepoTypes,
   ) where
 
+import Distribution.Compat.OrdNub (ordNub)
 import Data.Data   (Data)
-import Data.List   (nub, intercalate)
+import Data.List   (intercalate)
 import Data.Maybe  (fromMaybe, maybeToList)
 import Data.Monoid (Monoid(mempty, mappend))
 import Data.Typeable ( Typeable )
@@ -723,7 +724,7 @@ instance Monoid BuildInfo where
   }
     where
       combine    field = field a `mappend` field b
-      combineNub field = nub (combine field)
+      combineNub field = ordNub (combine field)
       combineMby field = field b `mplus` field a
 
 emptyBuildInfo :: BuildInfo

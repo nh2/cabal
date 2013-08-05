@@ -68,10 +68,11 @@ module Distribution.PackageDescription.Parse (
         flagFieldDescrs
   ) where
 
+import Distribution.Compat.OrdNub (ordNub)
 import Data.Char  (isSpace)
 import Data.Maybe (listToMaybe, isJust)
 import Data.Monoid ( Monoid(..) )
-import Data.List  (nub, unfoldr, partition, (\\))
+import Data.List  (unfoldr, partition, (\\))
 import Control.Monad (liftM, foldM, when, unless, ap)
 import Control.Applicative (Applicative(..))
 import Control.Arrow (first)
@@ -1063,7 +1064,7 @@ parsePackageDescription file = do
 
     checkCondTreeFlags :: [FlagName] -> CondTree ConfVar c a -> PM ()
     checkCondTreeFlags definedFlags ct = do
-        let fv = nub $ freeVars ct
+        let fv = ordNub $ freeVars ct
         unless (all (`elem` definedFlags) fv) $
             fail $ "These flags are used without having been defined: "
                 ++ intercalate ", " [ n | FlagName n <- fv \\ definedFlags ]

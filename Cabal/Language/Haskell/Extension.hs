@@ -78,7 +78,7 @@ data Language =
 
   -- | An unknown language, identified by its name.
   | UnknownLanguage String
-  deriving (Show, Read, Eq, Typeable, Data)
+  deriving (Show, Read, Eq, Ord, Typeable, Data)
 
 knownLanguages :: [Language]
 knownLanguages = [Haskell98, Haskell2010]
@@ -126,7 +126,7 @@ data Extension =
   -- pragma.
   | UnknownExtension String
 
-  deriving (Show, Read, Eq, Typeable, Data)
+  deriving (Show, Read, Eq, Ord, Typeable, Data)
 
 data KnownExtension =
 
@@ -657,7 +657,7 @@ data KnownExtension =
   -- * <http://www.haskell.org/haskellwiki/GHC/Data_Parallel_Haskell>
   | ParallelArrays
 
-  deriving (Show, Read, Eq, Enum, Bounded, Typeable, Data)
+  deriving (Show, Read, Eq, Enum, Bounded, Ord, Typeable, Data)
 
 {-# DEPRECATED knownExtensions
    "KnownExtension is an instance of Enum and Bounded, use those instead." #-}
