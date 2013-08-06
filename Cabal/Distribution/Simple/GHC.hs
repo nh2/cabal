@@ -130,8 +130,7 @@ import Data.List
 import Data.Maybe               ( catMaybes, fromMaybe )
 import Data.Monoid              ( Monoid(..) )
 import System.Directory
-         ( removeFile, getDirectoryContents, doesFileExist
-         , getTemporaryDirectory )
+         ( getDirectoryContents, doesFileExist, getTemporaryDirectory )
 import System.FilePath          ( (</>), (<.>), takeExtension,
                                   takeDirectory, replaceExtension,
                                   splitExtension )
