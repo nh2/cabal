@@ -26,7 +26,7 @@ import Distribution.System
 import Distribution.Verbosity
          ( Verbosity, deafening, verbose )
 import System.Directory
-         ( copyFile, doesFileExist )
+         ( copyFile, doesFileExist, removeFile )
 import System.FilePath
          ( (<.>) )
 
@@ -75,6 +75,10 @@ createArLibArchive verbosity ar target files = do
       initial = programInvocation ar (initialArgs ++ extraArgs)
       middle  = initial
       final   = programInvocation ar (finalArgs   ++ extraArgs)
+
+  -- Delete old .a.tmp file (we use -r, which fails if the file is malformed)
+  tmpExists <- doesFileExist tmpTarget
+  when tmpExists $ removeFile tmpTarget
 
   sequence_
     [ runProgramInvocation verbosity inv
