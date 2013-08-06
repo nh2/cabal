@@ -1373,19 +1373,21 @@ buildCommand progConf = makeCommand name shortDesc longDesc
 buildOptions :: ProgramConfiguration -> ShowOrParseArgs
                 -> [OptionField BuildFlags]
 buildOptions progConf showOrParseArgs =
-  optionVerbosity buildVerbosity (\v flags -> flags { buildVerbosity = v })
-  : optionDistPref
-  buildDistPref (\d flags -> flags { buildDistPref = d })
-  showOrParseArgs
+  [ optionVerbosity
+      buildVerbosity (\v flags -> flags { buildVerbosity = v })
 
-  : programConfigurationPaths   progConf showOrParseArgs
-  buildProgramPaths (\v flags -> flags { buildProgramPaths = v})
+  , optionDistPref
+      buildDistPref (\d flags -> flags { buildDistPref = d }) showOrParseArgs
+  ] ++
 
-  ++ programConfigurationOption progConf showOrParseArgs
-  buildProgramArgs (\v fs -> fs { buildProgramArgs = v })
+  programConfigurationPaths progConf showOrParseArgs
+    buildProgramPaths (\v flags -> flags { buildProgramPaths = v}) ++
 
-  ++ programConfigurationOptions progConf showOrParseArgs
-  buildProgramArgs (\v flags -> flags { buildProgramArgs = v})
+  programConfigurationOption progConf showOrParseArgs
+    buildProgramArgs (\v fs -> fs { buildProgramArgs = v }) ++
+
+  programConfigurationOptions progConf showOrParseArgs
+    buildProgramArgs (\v flags -> flags { buildProgramArgs = v})
 
 emptyBuildFlags :: BuildFlags
 emptyBuildFlags = mempty
