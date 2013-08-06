@@ -15,7 +15,8 @@ module Distribution.Simple.Program.Ar (
     multiStageProgramInvocation,
   ) where
 
-import Control.Applicative ((<$>), (<*>))
+import Control.Applicative ((<$>))
+import Control.Exception (evaluate)
 import Control.Monad (when)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
@@ -35,7 +36,8 @@ import System.Directory
 import System.FilePath
          ( (<.>) )
 import System.IO
-         ( IOMode(ReadWriteMode), SeekMode(AbsoluteSeek), hSeek, withBinaryFile, hFileSize )
+         ( IOMode(ReadMode, ReadWriteMode), SeekMode(AbsoluteSeek)
+         , hSeek, withBinaryFile, hFileSize )
 
 -- | Call @ar@ to create a library archive from a bunch of object files.
 --
@@ -102,9 +104,7 @@ createArLibArchive verbosity ar target files = do
   writeTarget <- do
     oldExists <- doesFileExist target
     if not oldExists then return True
-                     -- Lazy IO comparison
-                     else (/=) <$> BSL.readFile target
-                               <*> BSL.readFile tmpTarget
+                     else not <$> filesEqual target tmpTarget
 
   when writeTarget $ copyFile tmpTarget target
 
@@ -112,6 +112,17 @@ createArLibArchive verbosity ar target files = do
     verbosityOpts v | v >= deafening = ["-v"]
                     | v >= verbose   = []
                     | otherwise      = ["-c"]
+
+
+-- | Compares two files for equality.
+-- Uses lazy ByteStrings to not load them into memory.
+filesEqual :: FilePath -> FilePath -> IO Bool
+filesEqual f1 f2 =
+  withBinaryFile f1 ReadMode $ \h1 ->
+    withBinaryFile f2 ReadMode $ \h2 -> do
+      c1 <- BSL.hGetContents h1
+      c2 <- BSL.hGetContents h2
+      evaluate (c1 == c2)
 
 
 -- | Removes the time stamps of all files in the .a file.
