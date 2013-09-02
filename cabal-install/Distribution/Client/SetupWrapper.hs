@@ -266,7 +266,7 @@ externalSetupMethod verbosity options pkg bt mkargs = do
       pkgs -> return $ bestVersion id (map fst pkgs)
 
   bestVersion :: (a -> Version) -> [a] -> a
-  bestVersion f = maximumBy (comparing (preference . f))
+  bestVersion f = maximumBy (comparing (preference . f)) . reverse
     where
       preference version   = (sameVersion, sameMajorVersion
                              ,stableVersion, latestVersion)
