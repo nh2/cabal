@@ -2,6 +2,9 @@
 {-# OPTIONS_HADDOCK hide #-}
 module Distribution.Compat.CopyFile (
   copyFile,
+  copyFileAlways,
+  copyFileChanged,
+  filesEqual,
   copyOrdinaryFile,
   copyExecutableFile,
   setFileOrdinary,
@@ -11,21 +14,23 @@ module Distribution.Compat.CopyFile (
 
 
 import Control.Monad
-         ( when )
+         ( when, unless )
 import Control.Exception
          ( bracket, bracketOnError, throwIO )
+import qualified Data.ByteString.Lazy as BSL
 import Distribution.Compat.Exception
          ( catchIO )
 import System.IO.Error
          ( ioeSetLocation )
 import System.Directory
-         ( renameFile, removeFile )
+         ( doesFileExist, renameFile, removeFile )
 import Distribution.Compat.TempFile
          ( openBinaryTempFile )
 import System.FilePath
          ( takeDirectory )
 import System.IO
-         ( openBinaryFile, IOMode(ReadMode), hClose, hGetBuf, hPutBuf )
+         ( openBinaryFile, IOMode(ReadMode), hClose, hGetBuf, hPutBuf
+         , withBinaryFile )
 import Foreign
          ( allocaBytes )
 
@@ -39,9 +44,13 @@ import Foreign.C
          ( throwErrnoPathIfMinus1_ )
 #endif /* mingw32_HOST_OS */
 
+-- We use copyFileChanged to not touch the file if it is equal.
+-- This helps avoiding recompilation when it is depended upon.
+-- Note that setFileOrdinary and setFileExecutable do not update the mtime
+-- (at least not on Linux).
 copyOrdinaryFile, copyExecutableFile :: FilePath -> FilePath -> IO ()
-copyOrdinaryFile   src dest = copyFile src dest >> setFileOrdinary   dest
-copyExecutableFile src dest = copyFile src dest >> setFileExecutable dest
+copyOrdinaryFile   src dest = copyFileChanged src dest >> setFileOrdinary   dest
+copyExecutableFile src dest = copyFileChanged src dest >> setFileExecutable dest
 
 setFileOrdinary,  setFileExecutable, setDirOrdinary  :: FilePath -> IO ()
 #ifndef mingw32_HOST_OS
@@ -59,16 +68,24 @@ setFileExecutable _ = return ()
 -- This happens to be true on Unix and currently on Windows too:
 setDirOrdinary = setFileExecutable
 
+
+-- | An alias for `copyFileChanged`.
 copyFile :: FilePath -> FilePath -> IO ()
-copyFile fromFPath toFPath =
+copyFile = copyFileChanged
+
+
+-- | Copies a file to a new destination.
+-- For most cases, you should use `copyFileChanged` instead.
+copyFileAlways :: FilePath -> FilePath -> IO ()
+copyFileAlways fromFPath toFPath =
   copy
-    `catchIO` (\ioe -> throwIO (ioeSetLocation ioe "copyFile"))
+    `catchIO` (\ioe -> throwIO (ioeSetLocation ioe "copyFileAlways"))
     where copy = bracket (openBinaryFile fromFPath ReadMode) hClose $ \hFrom ->
                  bracketOnError openTmp cleanTmp $ \(tmpFPath, hTmp) ->
                  do allocaBytes bufferSize $ copyContents hFrom hTmp
                     hClose hTmp
                     renameFile tmpFPath toFPath
-          openTmp = openBinaryTempFile (takeDirectory toFPath) ".copyFile.tmp"
+          openTmp = openBinaryTempFile (takeDirectory toFPath) ".copyFileAlways.tmp"
           cleanTmp (tmpFPath, hTmp) = do
             hClose hTmp          `catchIO` \_ -> return ()
             removeFile tmpFPath  `catchIO` \_ -> return ()
@@ -79,3 +96,31 @@ copyFile fromFPath toFPath =
                   when (count > 0) $ do
                           hPutBuf hTo buffer count
                           copyContents hFrom hTo buffer
+
+
+-- | Like `copyFileAlways`, but does not touch the target if source and destination
+-- are already byte-identical. This is recommended as it is useful for
+-- time-stamp based recompilation avoidance.
+copyFileChanged :: FilePath -> FilePath -> IO ()
+copyFileChanged src dest = do
+  equal <- filesEqual src dest
+  unless equal $ copyFileAlways src dest
+
+
+-- | Checks if two files are byte-identical.
+-- Returns False if one of the file does not exist.
+filesEqual :: FilePath -> FilePath -> IO Bool
+filesEqual f1 f2 = do
+  ex1 <- doesFileExist f1
+  if not ex1
+    then return False
+    else do
+      ex2 <- doesFileExist f2
+      if not ex2
+        then return False
+        else do
+          withBinaryFile f1 ReadMode $ \h1 ->
+            withBinaryFile f2 ReadMode $ \h2 -> do
+              c1 <- BSL.hGetContents h1
+              c2 <- BSL.hGetContents h2
+              return $! c1 == c2
