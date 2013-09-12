@@ -126,14 +126,14 @@ import Distribution.Text
 import Language.Haskell.Extension (Language(..), Extension(..)
                                   ,KnownExtension(..))
 
+import Control.Concurrent       ( forkIO, newEmptyMVar, putMVar, takeMVar )
 import Control.Monad            ( unless, when )
 import Data.Char                ( isSpace )
 import Data.List
 import Data.Maybe               ( catMaybes, fromMaybe )
 import Data.Monoid              ( Monoid(..) )
 import System.Directory
-         ( removeFile, getDirectoryContents, doesFileExist
-         , getTemporaryDirectory )
+         ( getDirectoryContents, doesFileExist, getTemporaryDirectory )
 import System.FilePath          ( (</>), (<.>), takeExtension,
                                   takeDirectory, replaceExtension,
                                   splitExtension )
@@ -757,11 +757,16 @@ buildOrReplLib forRepl verbosity pkg_descr lbi lib clbi = do
                        (forceVanillaLib || withVanillaLib lbi) &&
                        (forceSharedLib  || withSharedLib  lbi) &&
                        null (ghcSharedOptions libBi)
-       if useDynToo
+
+       -- MVar for building (vanilla/shared) and profiling in parallel
+       -- TODO: We probably need to add a bit of terminate-early code.
+       m <- newEmptyMVar
+       _ <- forkIO $ if useDynToo
            then runGhcProg vanillaSharedOpts
-           else if isGhcDynamic then do shared;  vanilla
-                                else do vanilla; shared
+           else if isGhcDynamic then do shared;  vanilla; putMVar m ()
+                                else do vanilla; shared;  putMVar m ()
        whenProfLib (runGhcProg profOpts)
+       takeMVar m
 
   -- build any C sources
   unless (null (cSources libBi)) $ do
@@ -780,9 +785,11 @@ buildOrReplLib forRepl verbosity pkg_descr lbi lib clbi = do
                                 }
                 odir          = fromFlag (ghcOptObjDir vanillaCcOpts)
             createDirectoryIfMissingVerbose verbosity True odir
-            runGhcProg vanillaCcOpts
+            m <- newEmptyMVar
+            _ <- forkIO $ runGhcProg vanillaCcOpts >> putMVar m ()
             whenSharedLib forceSharedLib (runGhcProg sharedCcOpts)
             whenProfLib (runGhcProg profCcOpts)
+            takeMVar m
        | filename <- cSources libBi]
 
   -- TODO: problem here is we need the .c files built first, so we can load them
@@ -836,11 +843,6 @@ buildOrReplLib forRepl verbosity pkg_descr lbi lib clbi = do
             else return []
 
   unless (null hObjs && null cObjs && null stubObjs) $ do
-    -- first remove library files if they exists
-    unless forRepl $ sequence_
-      [ removeFile libFilePath `catchIO` \_ -> return ()
-      | libFilePath <- [vanillaLibFilePath, profileLibFilePath
-                       ,sharedLibFilePath,  ghciLibFilePath] ]
 
     let staticObjectFiles =
                hObjs
