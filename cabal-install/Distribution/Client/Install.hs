@@ -51,7 +51,8 @@ import Control.Monad
          ( forM_, when, unless )
 import System.Directory
          ( getTemporaryDirectory, doesDirectoryExist, doesFileExist,
-           createDirectoryIfMissing, removeFile, renameDirectory )
+           createDirectoryIfMissing, removeFile, renameDirectory,
+           getHomeDirectory )
 import System.FilePath
          ( (</>), (<.>), equalFilePath, takeDirectory )
 import System.IO
@@ -140,7 +141,7 @@ import Distribution.Version
          ( Version, VersionRange, foldVersionRange )
 import Distribution.Simple.Utils as Utils
          ( notice, info, warn, debug, debugNoWrap, die
-         , intercalate, withTempDirectory )
+         , intercalate )
 import Distribution.Client.Utils
          ( determineNumJobs, inDir, mergeBy, MergeResult(..)
          , tryCanonicalizePath )
@@ -1251,17 +1252,29 @@ installLocalTarballPackage
   -> IO BuildResult
 installLocalTarballPackage verbosity jobLimit pkgid
                            tarballPath distPref installPkg = do
-  tmp <- getTemporaryDirectory
-  withTempDirectory verbosity tmp (display pkgid) $ \tmpDirPath ->
+  -- TODO check how to get the user's ~/.cabal directory with a function
+  cacheDirPath <- do
+    homeDir <- getHomeDirectory
+    return $ homeDir </> ".cabal" </> "buildcache"
+  -- TODO We could make one buildcache per compiler version so that using
+  --      different compilers in turn does not invalidate the cache every
+  --      time. That would be a time/space tradeoff.
+
+  do
     onFailure UnpackFailed $ do
       let relUnpackedPath = display pkgid
-          absUnpackedPath = tmpDirPath </> relUnpackedPath
+          absUnpackedPath = cacheDirPath </> relUnpackedPath
           descFilePath = absUnpackedPath
                      </> display (packageName pkgid) <.> "cabal"
       withJobLimit jobLimit $ do
         info verbosity $ "Extracting " ++ tarballPath
-                      ++ " to " ++ tmpDirPath ++ "..."
-        extractTarGzFile tmpDirPath relUnpackedPath tarballPath
+                      ++ " to " ++ cacheDirPath ++ "..."
+        -- Only unpack if the package hasn't been unpacked in the past.
+        -- Assumes that the user doesn't mess around with these files, just
+        -- like we assume that nobody messes around with the cached tarballs.
+        ex <- doesDirectoryExist absUnpackedPath
+        unless ex $
+          extractTarGzFile cacheDirPath relUnpackedPath tarballPath
         exists <- doesFileExist descFilePath
         when (not exists) $
           die $ "Package .cabal file not found: " ++ show descFilePath
