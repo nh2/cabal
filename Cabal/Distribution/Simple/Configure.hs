@@ -1681,7 +1681,7 @@ checkForeignDeps pkg lbi verbosity =
                      -- PER-component (c.f. the "I'm Feeling Lucky"; we
                      -- should NOT be glomming everything together.)
                      ++ [ "-I" ++ buildDir lbi </> "autogen" ]
-                     ++ [ "-I" ++ dir | dir <- collectField PD.includeDirs ]
+                     ++ [ "-I" ++ dir | dir <- ordNub (collectField PD.includeDirs) ]
                      ++ ["-I."]
                      ++ collectField PD.cppOptions
                      ++ collectField PD.ccOptions
@@ -1702,7 +1702,7 @@ checkForeignDeps pkg lbi verbosity =
                         | dep <- deps
                         , opt <- Installed.ccOptions dep ]
 
-        commonLdArgs  = [ "-L" ++ dir | dir <- collectField PD.extraLibDirs ]
+        commonLdArgs  = [ "-L" ++ dir | dir <- ordNub (collectField PD.extraLibDirs) ]
                      ++ collectField PD.ldOptions
                      ++ [ "-L" ++ dir
                         | dir <- ordNub [ dir
