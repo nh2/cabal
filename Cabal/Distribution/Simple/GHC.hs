@@ -597,7 +597,12 @@ buildOrReplLib forRepl verbosity numJobs pkg_descr lbi lib clbi = do
       linkerOpts = mempty {
                       ghcOptLinkOptions       = toNubListR $
                                                   PD.ldOptions libBi
-                                                  ++ [ "-static" | withFullyStaticExe lbi ],
+                                                  ++ [ "-static" | withFullyStaticExe lbi ]
+                                                  -- Pass extra `ld-options` given
+                                                  -- through to GHC's (real!) linker.
+                                                  ++ map ("-Wl," ++)
+                                                       (maybe [] programOverrideArgs
+                                                         (lookupProgram ldProgram (withPrograms lbi))),
                       ghcOptLinkLibs          = toNubListR $ extraLibs libBi,
                       ghcOptLinkLibPath       = toNubListR $ extraLibDirs libBi,
                       ghcOptLinkFrameworks    = toNubListR $
@@ -1219,7 +1224,12 @@ gbuild verbosity numJobs pkg_descr lbi bm clbi = do
       linkerOpts = mempty {
                       ghcOptLinkOptions       = toNubListR $
                                                   PD.ldOptions bnfo
-                                                  ++ [ "-static" | withFullyStaticExe lbi ],
+                                                  ++ [ "-static" | withFullyStaticExe lbi ]
+                                                  -- Pass extra `ld-options` given
+                                                  -- through to GHC's linker.
+                                                  ++ map ("-Wl," ++)
+                                                       (maybe [] programOverrideArgs
+                                                         (lookupProgram ldProgram (withPrograms lbi))),
                       ghcOptLinkLibs          = toNubListR $ extraLibs bnfo,
                       ghcOptLinkLibPath       = toNubListR $ extraLibDirs bnfo,
                       ghcOptLinkFrameworks    = toNubListR $
