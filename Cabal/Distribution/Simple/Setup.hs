@@ -1630,7 +1630,7 @@ data BuildFlags = BuildFlags {
   }
   deriving (Read, Show, Generic)
 
-{-# DEPRECATED buildVerbose "Use buildVerbosity instead" #-}
+{-# DEPRECATED buildVerbose "Use buildVerbosity instead, typically: fromFlagOrDefault normal . buildVerbosity" #-}
 buildVerbose :: BuildFlags -> Verbosity
 buildVerbose = fromFlagOrDefault normal . buildVerbosity
 
