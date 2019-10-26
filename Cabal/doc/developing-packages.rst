@@ -2284,7 +2284,13 @@ system-dependent values for these fields.
 
 .. pkg-field:: extra-libraries: token list
 
-    A list of extra libraries to link with.
+    A list of extra libraries to link with (when not linking fully static
+    executables).
+
+.. pkg-field:: extra-libraries-static: token list
+
+    A list of extra libraries to link with (when linking fully static
+    executables).
 
 .. pkg-field:: extra-ghci-libraries: token list
 
@@ -2302,7 +2308,13 @@ system-dependent values for these fields.
 
 .. pkg-field:: extra-lib-dirs: directory list
 
-    A list of directories to search for libraries.
+    A list of directories to search for libraries (when not linking fully static
+    executables).
+
+.. pkg-field:: extra-lib-dirs-static: directory list
+
+    A list of directories to search for libraries (when linking fully static
+    executables).
 
 .. pkg-field:: cc-options: token list
 

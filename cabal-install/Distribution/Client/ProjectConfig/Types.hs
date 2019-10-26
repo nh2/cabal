@@ -239,6 +239,7 @@ data PackageConfig
        packageConfigSharedLib           :: Flag Bool,
        packageConfigStaticLib           :: Flag Bool,
        packageConfigDynExe              :: Flag Bool,
+       packageConfigFullyStaticExe      :: Flag Bool,
        packageConfigProf                :: Flag Bool, --TODO: [code cleanup] sort out
        packageConfigProfLib             :: Flag Bool, --      this duplication
        packageConfigProfExe             :: Flag Bool, --      and consistency

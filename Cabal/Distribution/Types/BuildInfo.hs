@@ -76,6 +76,7 @@ data BuildInfo = BuildInfo {
         oldExtensions     :: [Extension],   -- ^ the old extensions field, treated same as 'defaultExtensions'
 
         extraLibs         :: [String], -- ^ what libraries to link with when compiling a program that uses your package
+        extraLibsStatic   :: [String], -- ^ what libraries to link with when compiling a program fully statically that uses your package
         extraGHCiLibs     :: [String], -- ^ if present, overrides extraLibs when package is loaded with GHCi.
         extraBundledLibs  :: [String], -- ^ if present, adds libs to hs-lirbaries, which become part of the package.
                                        --   Example: the Cffi library shipping with the rts, alognside the HSrts-1.0.a,.o,...
@@ -89,6 +90,7 @@ data BuildInfo = BuildInfo {
                                        --   should only be needed in very specific cases, e.g. the `rts` package, where
                                        --   there are multiple copies of slightly differently built libs.
         extraLibDirs      :: [String],
+        extraLibDirsStatic :: [String],
         includeDirs       :: [FilePath], -- ^directories to find .h files
         includes          :: [FilePath], -- ^ The .h files to be found in includeDirs
         installIncludes   :: [FilePath], -- ^ .h files to install with the package
@@ -137,10 +139,12 @@ instance Monoid BuildInfo where
     otherExtensions     = [],
     oldExtensions       = [],
     extraLibs           = [],
+    extraLibsStatic     = [],
     extraGHCiLibs       = [],
     extraBundledLibs    = [],
     extraLibFlavours    = [],
     extraLibDirs        = [],
+    extraLibDirsStatic  = [],
     includeDirs         = [],
     includes            = [],
     installIncludes     = [],
@@ -183,10 +187,12 @@ instance Semigroup BuildInfo where
     otherExtensions     = combineNub otherExtensions,
     oldExtensions       = combineNub oldExtensions,
     extraLibs           = combine    extraLibs,
+    extraLibsStatic     = combine    extraLibsStatic,
     extraGHCiLibs       = combine    extraGHCiLibs,
     extraBundledLibs    = combine    extraBundledLibs,
     extraLibFlavours    = combine    extraLibFlavours,
     extraLibDirs        = combineNub extraLibDirs,
+    extraLibDirsStatic  = combineNub extraLibDirsStatic,
     includeDirs         = combineNub includeDirs,
     includes            = combineNub includes,
     installIncludes     = combineNub installIncludes,

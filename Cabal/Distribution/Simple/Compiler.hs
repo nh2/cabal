@@ -63,6 +63,7 @@ module Distribution.Simple.Compiler (
         backpackSupported,
         arResponseFilesSupported,
         libraryDynDirSupported,
+        libraryDirsStaticSupported,
 
         -- * Support for profiling detail levels
         ProfDetailLevel(..),
@@ -354,6 +355,10 @@ libraryDynDirSupported comp = case compilerFlavor comp of
   _   -> False
  where
   v = compilerVersion comp
+
+-- | Does this compiler support library-dirs-static?
+libraryDirsStaticSupported :: Compiler -> Bool
+libraryDirsStaticSupported = ghcSupported "Support library-dirs-static"
 
 -- | Does this compiler's "ar" command supports response file
 -- arguments (i.e. @file-style arguments).

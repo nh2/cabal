@@ -422,6 +422,11 @@ configure (pkg_descr0, pbi) cfg = do
         die' verbosity $ "--enable-tests/--enable-benchmarks are incompatible with" ++
               " explicitly specifying a component to configure."
 
+    -- Some sanity checks related to dynamic/static linking.
+    when (fromFlag (configDynExe cfg) && fromFlag (configFullyStaticExe cfg)) $
+        die' verbosity $ "--enable-executable-dynamic and --enable-executable-static" ++
+              " are incompatible with each other."
+
     -- allConstraints:  The set of all 'Dependency's we have.  Used ONLY
     --                  to 'configureFinalizedPackage'.
     -- requiredDepsMap: A map from 'PackageName' to the specifically
@@ -577,8 +582,14 @@ configure (pkg_descr0, pbi) cfg = do
           configureAllKnownPrograms (lessVerbose verbosity) programDb
       >>= configureRequiredPrograms verbosity requiredBuildTools
 
+    let withFullyStaticExe_ = fromFlag $ configFullyStaticExe cfg
+
     (pkg_descr', programDb'') <-
-      configurePkgconfigPackages verbosity pkg_descr programDb' enabled
+      configurePkgconfigPackages
+          verbosity
+          pkg_descr
+          programDb'
+          enabled
 
     -- Compute internal component graph
     --
@@ -680,6 +691,8 @@ configure (pkg_descr0, pbi) cfg = do
             fromFlagOrDefault False $ configStaticLib cfg
 
         withDynExe_ = fromFlag $ configDynExe cfg
+
+        withFullyStaticExe_ = fromFlag $ configFullyStaticExe cfg
     when (withDynExe_ && not withSharedLib_) $ warn verbosity $
            "Executables will use dynamic linking, but a shared library "
         ++ "is not being built. Linking will fail if any executables "
@@ -719,6 +732,7 @@ configure (pkg_descr0, pbi) cfg = do
                 withSharedLib       = withSharedLib_,
                 withStaticLib       = withStaticLib_,
                 withDynExe          = withDynExe_,
+                withFullyStaticExe  = withFullyStaticExe_,
                 withProfLib         = False,
                 withProfLibDetail   = ProfDetailNone,
                 withProfExe         = False,
@@ -967,6 +981,7 @@ configureFinalizedPackage verbosity cfg enabled
   where
     addExtraIncludeLibDirs pkg_descr =
         let extraBi = mempty { extraLibDirs = configExtraLibDirs cfg
+                             , extraLibDirsStatic = configExtraLibDirsStatic cfg
                              , extraFrameworkDirs = configExtraFrameworkDirs cfg
                              , PD.includeDirs = configExtraIncludeDirs cfg}
             modifyLib l        = l{ libBuildInfo        = libBuildInfo l
@@ -1573,7 +1588,8 @@ configurePkgconfigPackages verbosity pkg_descr progdb enabled
       let pkgs = nub [ display pkg | PkgconfigDependency pkg _ <- pkgdeps ]
       ccflags <- pkgconfig ("--cflags" : pkgs)
       ldflags <- pkgconfig ("--libs"   : pkgs)
-      return (ccLdOptionsBuildInfo (words ccflags) (words ldflags))
+      ldflags_static <- pkgconfig ("--libs"   : "--static" : pkgs)
+      return (ccLdOptionsBuildInfo (words ccflags) (words ldflags) (words ldflags_static))
 
 -- | Makes a 'BuildInfo' from C compiler and linker flags.
 --
@@ -1583,17 +1599,22 @@ configurePkgconfigPackages verbosity pkg_descr progdb enabled
 --
 -- > ccflags <- getDbProgramOutput verbosity prog progdb ["--cflags"]
 -- > ldflags <- getDbProgramOutput verbosity prog progdb ["--libs"]
--- > return (ccldOptionsBuildInfo (words ccflags) (words ldflags))
+-- > ldflags_static <- getDbProgramOutput verbosity prog progdb ["--libs", "--static"]
+-- > return (ccldOptionsBuildInfo (words ccflags) (words ldflags) (words ldflags_static))
 --
-ccLdOptionsBuildInfo :: [String] -> [String] -> BuildInfo
-ccLdOptionsBuildInfo cflags ldflags =
+ccLdOptionsBuildInfo :: [String] -> [String] -> [String] -> BuildInfo
+ccLdOptionsBuildInfo cflags ldflags ldflags_static =
   let (includeDirs',  cflags')   = partition ("-I" `isPrefixOf`) cflags
       (extraLibs',    ldflags')  = partition ("-l" `isPrefixOf`) ldflags
       (extraLibDirs', ldflags'') = partition ("-L" `isPrefixOf`) ldflags'
+      (extraLibsStatic')         = filter ("-l" `isPrefixOf`) ldflags_static
+      (extraLibDirsStatic')      = filter ("-L" `isPrefixOf`) ldflags_static
   in mempty {
        PD.includeDirs  = map (drop 2) includeDirs',
        PD.extraLibs    = map (drop 2) extraLibs',
        PD.extraLibDirs = map (drop 2) extraLibDirs',
+       PD.extraLibsStatic    = map (drop 2) extraLibsStatic',
+       PD.extraLibDirsStatic = map (drop 2) extraLibDirsStatic',
        PD.ccOptions    = cflags',
        PD.ldOptions    = ldflags''
      }
@@ -1661,7 +1682,10 @@ checkForeignDeps pkg lbi verbosity =
                explainErrors missingHdr missingLibs)
       where
         allHeaders = collectField PD.includes
-        allLibs    = collectField PD.extraLibs
+        allLibs    = collectField $
+          if withFullyStaticExe lbi
+            then PD.extraLibsStatic
+            else PD.extraLibs
 
         ifBuildsWith headers args success failure = do
             checkDuplicateHeaders
@@ -1759,12 +1783,22 @@ checkForeignDeps pkg lbi verbosity =
                         | dep <- deps
                         , opt <- Installed.ccOptions dep ]
 
-        commonLdArgs  = [ "-L" ++ dir | dir <- ordNub (collectField PD.extraLibDirs) ]
+        commonLdArgs  = [ "-L" ++ dir
+                        | dir <- ordNub $ collectField $
+                            if withFullyStaticExe lbi
+                              then PD.extraLibDirsStatic
+                              else PD.extraLibDirs
+                        ]
                      ++ collectField PD.ldOptions
                      ++ [ "-L" ++ dir
-                        | dir <- ordNub [ dir
-                                        | dep <- deps
-                                        , dir <- Installed.libraryDirs dep ]
+                        | dir <- ordNub $
+                            [ dir
+                            | dep <- deps
+                            , dir <-
+                                if withFullyStaticExe lbi
+                                  then Installed.libraryDirsStatic dep
+                                  else Installed.libraryDirs dep
+                            ]
                         ]
                      --TODO: do we also need dependent packages' ld options?
         makeLdArgs libs = [ "-l"++lib | lib <- libs ] ++ commonLdArgs

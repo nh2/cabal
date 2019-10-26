@@ -247,6 +247,7 @@ data ElaboratedConfiguredPackage
        elabSharedLib            :: Bool,
        elabStaticLib            :: Bool,
        elabDynExe               :: Bool,
+       elabFullyStaticExe       :: Bool,
        elabGHCiLib              :: Bool,
        elabProfLib              :: Bool,
        elabProfExe              :: Bool,

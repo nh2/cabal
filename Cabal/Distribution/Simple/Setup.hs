@@ -219,6 +219,8 @@ data ConfigFlags = ConfigFlags {
     configStaticLib     :: Flag Bool,     -- ^Build static library
     configDynExe        :: Flag Bool,     -- ^Enable dynamic linking of the
                                           -- executables.
+    configFullyStaticExe :: Flag Bool,     -- ^Enable fully static linking of the
+                                          -- executables.
     configProfExe       :: Flag Bool,     -- ^Enable profiling in the
                                           -- executables.
     configProf          :: Flag Bool,     -- ^Enable profiling in the library
@@ -235,6 +237,9 @@ data ConfigFlags = ConfigFlags {
                                                             -- paths
     configScratchDir    :: Flag FilePath,
     configExtraLibDirs  :: [FilePath],   -- ^ path to search for extra libraries
+    configExtraLibDirsStatic :: [FilePath],   -- ^ path to search for extra
+                                              --   libraries when linking
+                                              --   fully static executables
     configExtraFrameworkDirs :: [FilePath],   -- ^ path to search for extra
                                               -- frameworks (OS X only)
     configExtraIncludeDirs :: [FilePath],   -- ^ path to search for header files
@@ -301,6 +306,7 @@ instance Eq ConfigFlags where
     && equal configSharedLib
     && equal configStaticLib
     && equal configDynExe
+    && equal configFullyStaticExe
     && equal configProfExe
     && equal configProf
     && equal configProfDetail
@@ -312,6 +318,7 @@ instance Eq ConfigFlags where
     && equal configInstallDirs
     && equal configScratchDir
     && equal configExtraLibDirs
+    && equal configExtraLibDirsStatic
     && equal configExtraIncludeDirs
     && equal configIPID
     && equal configDeterministic
@@ -355,6 +362,7 @@ defaultConfigFlags progDb = emptyConfigFlags {
     configSharedLib    = NoFlag,
     configStaticLib    = NoFlag,
     configDynExe       = Flag False,
+    configFullyStaticExe = Flag False,
     configProfExe      = NoFlag,
     configProf         = NoFlag,
     configProfDetail   = NoFlag,
@@ -493,6 +501,11 @@ configureOptions showOrParseArgs =
          configDynExe (\v flags -> flags { configDynExe = v })
          (boolOpt [] [])
 
+      ,option "" ["executable-static"]
+         "Executable fully static linking"
+         configFullyStaticExe (\v flags -> flags { configFullyStaticExe = v })
+         (boolOpt [] [])
+
       ,option "" ["profiling"]
          "Executable and library profiling"
          configProf (\v flags -> flags { configProf = v })
@@ -622,6 +635,11 @@ configureOptions showOrParseArgs =
       ,option "" ["extra-lib-dirs"]
          "A list of directories to search for external libraries"
          configExtraLibDirs (\v flags -> flags {configExtraLibDirs = v})
+         (reqArg' "PATH" (\x -> [x]) id)
+
+      ,option "" ["extra-lib-dirs-static"]
+         "A list of directories to search for external libraries when linking fully static executables"
+         configExtraLibDirsStatic (\v flags -> flags {configExtraLibDirsStatic = v})
          (reqArg' "PATH" (\x -> [x]) id)
 
       ,option "" ["extra-framework-dirs"]
