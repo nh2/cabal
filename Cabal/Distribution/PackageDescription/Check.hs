@@ -910,7 +910,13 @@ checkGhcOptions fieldName getOptions pkg =
   , checkAlternatives fieldName "extra-libraries"
       [ (flag, lib) | flag@('-':'l':lib) <- all_ghc_options ]
 
+  , checkAlternatives fieldName "extra-libraries-static"
+      [ (flag, lib) | flag@('-':'l':lib) <- all_ghc_options ]
+
   , checkAlternatives fieldName "extra-lib-dirs"
+      [ (flag, dir) | flag@('-':'L':dir) <- all_ghc_options ]
+
+  , checkAlternatives fieldName "extra-lib-dirs-static"
       [ (flag, dir) | flag@('-':'L':dir) <- all_ghc_options ]
 
   , checkAlternatives fieldName "frameworks"
@@ -1125,6 +1131,7 @@ checkPaths pkg =
       [    [ (path, "includes")         | path <- includes        bi ]
         ++ [ (path, "include-dirs")     | path <- includeDirs     bi ]
         ++ [ (path, "extra-lib-dirs")   | path <- extraLibDirs    bi ]
+        ++ [ (path, "extra-lib-dirs-static") | path <- extraLibDirs    bi ]
       | bi <- allBuildInfo pkg ]
 
 --TODO: check sets of paths that would be interpreted differently between Unix
@@ -2050,6 +2057,7 @@ checkLocalPathsExist ops pkg = do
              | bi <- allBuildInfo pkg
              , (dir, kind) <-
                   [ (dir, "extra-lib-dirs") | dir <- extraLibDirs bi ]
+               ++ [ (dir, "extra-lib-dirs-static") | dir <- extraLibDirsStatic bi ]
                ++ [ (dir, "extra-framework-dirs")
                   | dir <- extraFrameworkDirs  bi ]
                ++ [ (dir, "include-dirs")   | dir <- includeDirs  bi ]

@@ -132,6 +132,10 @@ class HasBuildInfo a where
    extraLibs = buildInfo . extraLibs
    {-# INLINE extraLibs #-}
 
+   extraLibsStatic :: Lens' a [String]
+   extraLibsStatic = buildInfo . extraLibsStatic
+   {-# INLINE extraLibsStatic #-}
+
    extraGHCiLibs :: Lens' a [String]
    extraGHCiLibs = buildInfo . extraGHCiLibs
    {-# INLINE extraGHCiLibs #-}
@@ -151,6 +155,10 @@ class HasBuildInfo a where
    extraLibDirs :: Lens' a [String]
    extraLibDirs = buildInfo . extraLibDirs
    {-# INLINE extraLibDirs #-}
+
+   extraLibDirsStatic :: Lens' a [String]
+   extraLibDirsStatic = buildInfo . extraLibDirsStatic
+   {-# INLINE extraLibDirsStatic #-}
 
    includeDirs :: Lens' a [FilePath]
    includeDirs = buildInfo . includeDirs

@@ -114,6 +114,10 @@ libraryDirs :: Lens' InstalledPackageInfo [FilePath]
 libraryDirs f s = fmap (\x -> s { T.libraryDirs = x }) (f (T.libraryDirs s))
 {-# INLINE libraryDirs #-}
 
+libraryDirsStatic :: Lens' InstalledPackageInfo [FilePath]
+libraryDirsStatic f s = fmap (\x -> s { T.libraryDirsStatic = x }) (f (T.libraryDirsStatic s))
+{-# INLINE libraryDirsStatic #-}
+
 libraryDynDirs :: Lens' InstalledPackageInfo [FilePath]
 libraryDynDirs f s = fmap (\x -> s { T.libraryDynDirs = x }) (f (T.libraryDynDirs s))
 {-# INLINE libraryDynDirs #-}
@@ -129,6 +133,10 @@ hsLibraries f s = fmap (\x -> s { T.hsLibraries = x }) (f (T.hsLibraries s))
 extraLibraries :: Lens' InstalledPackageInfo [String]
 extraLibraries f s = fmap (\x -> s { T.extraLibraries = x }) (f (T.extraLibraries s))
 {-# INLINE extraLibraries #-}
+
+extraLibrariesStatic :: Lens' InstalledPackageInfo [String]
+extraLibrariesStatic f s = fmap (\x -> s { T.extraLibrariesStatic = x }) (f (T.extraLibrariesStatic s))
+{-# INLINE extraLibrariesStatic #-}
 
 extraGHCiLibraries :: Lens' InstalledPackageInfo [String]
 extraGHCiLibraries f s = fmap (\x -> s { T.extraGHCiLibraries = x }) (f (T.extraGHCiLibraries s))
