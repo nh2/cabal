@@ -461,6 +461,8 @@ substTopDir topDir ipo
            = map f (InstalledPackageInfo.importDirs ipo),
        InstalledPackageInfo.libraryDirs
            = map f (InstalledPackageInfo.libraryDirs ipo),
+       InstalledPackageInfo.libraryDirsStatic
+           = map f (InstalledPackageInfo.libraryDirsStatic ipo),
        InstalledPackageInfo.includeDirs
            = map f (InstalledPackageInfo.includeDirs ipo),
        InstalledPackageInfo.frameworkDirs

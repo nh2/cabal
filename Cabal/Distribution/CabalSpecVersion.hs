@@ -79,7 +79,7 @@ specHasCommonStanzas v =
     else NoCommonStanzas
 
 specHasElif :: CabalSpecVersion -> HasElif
-specHasElif v = 
+specHasElif v =
     if v >= CabalSpecV2_2
     then HasElif
     else NoElif

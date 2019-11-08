@@ -582,8 +582,13 @@ buildOrReplLib mReplFlags verbosity numJobs pkg_descr lbi lib clbi = do
                                                 -- through to GHC's linker.
                                                 ++ maybe [] programOverrideArgs
                                                      (lookupProgram ldProgram (withPrograms lbi)),
-                      ghcOptLinkLibs          = extraLibs libBi,
-                      ghcOptLinkLibPath       = toNubListR $ extraLibDirs libBi,
+                      ghcOptLinkLibs          = if withFullyStaticExe lbi
+                                                  then extraLibsStatic libBi
+                                                  else extraLibs libBi,
+                      ghcOptLinkLibPath       = toNubListR $
+                                                  if withFullyStaticExe lbi
+                                                    then extraLibDirsStatic libBi
+                                                    else extraLibDirs libBi,
                       ghcOptLinkFrameworks    = toNubListR $ PD.frameworks libBi,
                       ghcOptLinkFrameworkDirs = toNubListR $
                                                 PD.extraFrameworkDirs libBi,
@@ -1283,8 +1288,13 @@ gbuild verbosity numJobs pkg_descr lbi bm clbi = do
                                                 -- through to GHC's linker.
                                                 ++ maybe [] programOverrideArgs
                                                      (lookupProgram ldProgram (withPrograms lbi)),
-                      ghcOptLinkLibs          = extraLibs bnfo,
-                      ghcOptLinkLibPath       = toNubListR $ extraLibDirs bnfo,
+                      ghcOptLinkLibs          = if withFullyStaticExe lbi
+                                                  then extraLibsStatic bnfo
+                                                  else extraLibs bnfo,
+                      ghcOptLinkLibPath       = toNubListR $
+                                                  if withFullyStaticExe lbi
+                                                    then extraLibDirsStatic bnfo
+                                                    else extraLibDirs bnfo,
                       ghcOptLinkFrameworks    = toNubListR $
                                                 PD.frameworks bnfo,
                       ghcOptLinkFrameworkDirs = toNubListR $
@@ -1423,6 +1433,7 @@ gbuild verbosity numJobs pkg_descr lbi bm clbi = do
                       ghcOptLinkNoHsMain = toFlag (null inputFiles)
                      }
                    `mappend` (if withDynExe lbi then dynLinkerOpts else mempty)
+                   `mappend` (if withFullyStaticExe lbi then mempty { ghcOptExtra = ["-staticexe"] } else mempty)
 
       info verbosity "Linking..."
       -- Work around old GHCs not relinking in this

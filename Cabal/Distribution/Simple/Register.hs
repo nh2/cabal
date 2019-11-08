@@ -426,12 +426,14 @@ generalInstalledPackageInfo adjustRelIncDirs pkg abi_hash lib lbi clbi installDi
     IPI.trusted            = IPI.trusted IPI.emptyInstalledPackageInfo,
     IPI.importDirs         = [ libdir installDirs | hasModules ],
     IPI.libraryDirs        = libdirs,
+    IPI.libraryDirsStatic  = libdirsStatic,
     IPI.libraryDynDirs     = dynlibdirs,
     IPI.dataDir            = datadir installDirs,
     IPI.hsLibraries        = (if hasLibrary
                               then [getHSLibraryName (componentUnitId clbi)]
                               else []) ++ extraBundledLibs bi,
     IPI.extraLibraries     = extraLibs bi,
+    IPI.extraLibrariesStatic = if libraryDirsStaticSupported comp then extraLibsStatic bi else [],
     IPI.extraGHCiLibraries = extraGHCiLibs bi,
     IPI.includeDirs        = absinc ++ adjustRelIncDirs relinc,
     IPI.includes           = includes bi,
@@ -468,6 +470,17 @@ generalInstalledPackageInfo adjustRelIncDirs pkg abi_hash lib lbi clbi installDi
                              || (not (null (jsSources bi)) &&
                                 compilerFlavor comp == GHCJS))
                && not (componentIsIndefinite clbi)
+    libdirsStatic
+      | not (libraryDirsStaticSupported comp) = []
+      | hasLibrary = libdir installDirs : extraLibDirsStaticOrFallback
+      | otherwise  =                      extraLibDirsStaticOrFallback
+      where
+        -- If no static library dirs were given, the package likely makes no
+        -- distinction between fully static linking and otherwise.
+        -- Fall back to the normal library dirs in that case.
+        extraLibDirsStaticOrFallback = case extraLibDirsStatic bi of
+          [] -> extraLibDirs bi
+          dirs -> dirs
     (libdirs, dynlibdirs)
       | not hasLibrary
       = (extraLibDirs bi, [])
